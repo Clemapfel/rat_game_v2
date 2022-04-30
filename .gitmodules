@@ -1,0 +1,6 @@
+[submodule "dependencies/jluna"]
+	path = dependencies/jluna
+	url = https://github.com/Clemapfel/jluna
+[submodule "dependencies/SFML"]
+	path = dependencies/SFML
+	url = https://github.com/Clemapfel/SFML
