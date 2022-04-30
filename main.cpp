@@ -5,6 +5,7 @@
 
 #include <jluna.hpp>
 #include <SFML/Window.hpp>
+#include <box2d/b2_api.h>
 
 int main()
 {

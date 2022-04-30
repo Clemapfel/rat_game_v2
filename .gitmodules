@@ -4,3 +4,6 @@
 [submodule "dependencies/SFML"]
 	path = dependencies/SFML
 	url = https://github.com/Clemapfel/SFML
+[submodule "dependencies/box2d"]
+	path = dependencies/box2d
+	url = https://github.com/erincatto/box2d
