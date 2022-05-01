@@ -11,35 +11,29 @@ mutable struct Entity <: AbstractEntity
     name::String    # cleartext name
     id::String      # internal id
 
-    hp_base::Integer    # base hp value
-    ap_base::Integer    # base ap value
+    base_stats::BaseStats
 
     hp::Integer
     ap::Integer
-
-    attack_base::Integer
-    defense_base::Integer
-    speed_base::Integer
 
     attack_change::StatChange
     defense_change::StatChange
     speed_change::StatChange
 
-    status::StatusAilment
+    # status ailments
     status_state::StatusState
 
     is_enemy::Bool
 
     # default ctor
     function Entity(id::String)
-        return new(id, id,
+        return new(
+            id, id,
+            BaseStats(100, 100, 50, 50, 50),
             100, 100,
-            100, 100,
-            50, 50, 50,
             ZERO, ZERO, ZERO,
-            NO_STATUS, StatusState(),
+            StatusState(),
             false);
     end
 end
 @public Entity
-

@@ -31,6 +31,7 @@ NO_TURN_EFFECT(_::AbstractEntity) = return nothing
 # status state used for entities
 mutable struct StatusState
 
+    status::StatusAilment
     turn_effect::Function
 
     attack_factor::Float32
@@ -42,7 +43,7 @@ mutable struct StatusState
     blinded_counter::Int64
     at_risk_counter::Int64
 
-    StatusState() = new(NO_TURN_EFFECT, 1.0, 1.0, 1.0, -1, -1, -1, -1)
+    StatusState() = new(NO_STATUS, NO_TURN_EFFECT, 1.0, 1.0, 1.0, -1, -1, -1, -1)
 end
 @private StatusState
 
@@ -67,7 +68,7 @@ end
 # remove status ailment
 function cure(e::AbstractEntity) ::Nothing
 
-    e.status = NO_STATUS
+    e.status_state.status = NO_STATUS
     reset!(e.status_state)
     return nothing
 end
@@ -105,7 +106,7 @@ end
 function inflict_dead(x::AbstractEntity) ::Nothing
 
     reset!(x.status_state)
-    x.status = DEAD
+    x.status_state.status= DEAD
     return nothing
 end
 @public inflict_dead
@@ -113,9 +114,9 @@ end
 # knock out
 function inflict_knocked_out(x::AbstractEntity) ::Nothing
 
-    if x.status != DEAD
+    if x.status_state.status!= DEAD
         reset!(x.status_state)
-        x.status = KNOCKED_OUT
+        x.status_state.status= KNOCKED_OUT
     end
     return nothing
 end
@@ -124,10 +125,10 @@ end
 # at risk
 function inflict_at_risk(x::AbstractEntity) ::Nothing
 
-    if x.status == NO_STATUS
+    if x.status_state.status== NO_STATUS
 
         reset!(x.status_state)
-        x.status = AT_RISK
+        x.status_state.status= AT_RISK
         x.status_state.at_risk_counter = 0
 
         # cure after 3 turns
@@ -145,10 +146,10 @@ end
 # asleep
 function inflict_asleep(x::AbstractEntity) ::Nothing
 
-    if x.status == NO_STATUS
+    if x.status_state.status== NO_STATUS
 
         reset!(x.status_state)
-        x.status = ASLEEP
+        x.status_state.status= ASLEEP
         x.status_state.asleep_counter = 0
 
         # 50% chance to wake up, max 4 turns
@@ -168,10 +169,10 @@ end
 # poison
 function inflict_poisoned(x::AbstractEntity) ::Nothing
 
-    if x.status == NO_STATUS
+    if x.status_state.status== NO_STATUS
 
         reset!(x.status_state)
-        x.status = POISONED
+        x.status_state.status= POISONED
 
         # deal 1/8th per turn
         x.status_state.turn_effect = function (x::AbstractEntity)
@@ -185,10 +186,10 @@ end
 # blinded
 function inflict_blinded(x::AbstractEntity) ::Nothing
 
-    if x.status == NO_STATUS
+    if x.status_state.status== NO_STATUS
 
         reset!(x.status_state)
-        x.status = BLINDED
+        x.status_state.status= BLINDED
 
         # set attack to 0, lasts for 3 turns
         x.status_state.attack_factor = 0
@@ -207,11 +208,11 @@ end
 function inflict_burned(x::AbstractEntity) ::Nothing
 
     # fire + ice = cure
-    if x.status == CHILLED || x.status == FROZEN
+    if x.status_state.status== CHILLED || x.status_state.status== FROZEN
         cure(x)
-    elseif x.status == NO_STATUS
+    elseif x.status_state.status== NO_STATUS
         reset!(x.status_state)
-        x.status = BURNED
+        x.status_state.status= BURNED
 
         # def * 0.5, inflict 1/16th each turn
         x.status_state.defense_factor = 0.5
@@ -227,16 +228,16 @@ end
 function inflict_chilled(x::AbstractEntity) ::Nothing
 
     # chilled + chilled = frozen
-    if x.status == CHILLED
+    if x.status_state.status== CHILLED
        inflict_frozen(x)
 
     # fire + ice = cure
-    elseif x.status == BURNED
+    elseif x.status_state.status== BURNED
         cure(x)
 
-    elseif x.status == NO_STATUS
+    elseif x.status_state.status== NO_STATUS
         reset!(x.status_state)
-        x.status = CHILLED
+        x.status_state.status= CHILLED
 
         # speed * 0.5
         x.status_state.speed_factor = 0.5
@@ -249,11 +250,11 @@ end
 function inflict_frozen(x::AbstractEntity) ::Nothing
 
     # fire + ice = cure
-    if x.status == BURNED
+    if x.status_state.status== BURNED
         cure(x)
-    elseif x.status == NO_STATUS || x.status == CHILLED
+    elseif x.status_state.status== NO_STATUS || x.status_state.status== CHILLED
         reset!(x.status_state)
-        x.status = FROZEN
+        x.status_state.status= FROZEN
 
         # speed = 0
         x.status_state.speed_factor = 0

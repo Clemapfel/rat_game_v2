@@ -8,7 +8,7 @@
 
     e = Entity("test")
 
-    @test e.status == NO_STATUS
+    @test e.status_state.status== NO_STATUS
     @testset begin
         @test e.status_state.turn_effect(e) == nothing
         @test e.status_state.attack_factor == 1
@@ -21,65 +21,65 @@
     end
 
     inflict_at_risk(e)
-    @test e.status == AT_RISK
+    @test e.status_state.status== AT_RISK
     cure(e)
 
     inflict_asleep(e)
-    @test e.status == ASLEEP
+    @test e.status_state.status== ASLEEP
     cure(e)
 
     inflict_blinded(e)
-    @test e.status == BLINDED
+    @test e.status_state.status== BLINDED
     @test e.status_state.attack_factor == 0
     cure(e)
 
     inflict_poisoned(e)
-    @test e.status == POISONED
+    @test e.status_state.status== POISONED
     cure(e)
 
     inflict_burned(e)
-    @test e.status == BURNED
+    @test e.status_state.status== BURNED
     @test e.status_state.defense_factor == 0.5
     cure(e)
 
     inflict_chilled(e)
-    @test e.status == CHILLED
+    @test e.status_state.status== CHILLED
     @test e.status_state.speed_factor == 0.5
     cure(e)
 
     inflict_frozen(e)
-    @test e.status == FROZEN
+    @test e.status_state.status== FROZEN
     @test e.status_state.speed_factor == 0
     cure(e)
 
     inflict_burned(e)
     inflict_chilled(e)
-    @test e.status == NO_STATUS
+    @test e.status_state.status== NO_STATUS
     cure(e)
 
     inflict_chilled(e)
     inflict_burned(e)
-    @test e.status == NO_STATUS
+    @test e.status_state.status== NO_STATUS
     cure(e)
 
     inflict_burned(e)
     inflict_frozen(e)
-    @test e.status == NO_STATUS
+    @test e.status_state.status== NO_STATUS
     cure(e)
 
     inflict_frozen(e)
     inflict_burned(e)
-    @test e.status == NO_STATUS
+    @test e.status_state.status== NO_STATUS
     cure(e)
 
     inflict_chilled(e)
     inflict_chilled(e)
-    @test e.status == FROZEN
+    @test e.status_state.status== FROZEN
     cure(e)
 
     inflict_chilled(e)
     inflict_frozen(e)
-    @test e.status == FROZEN
+    @test e.status_state.status== FROZEN
     cure(e)
 end
 

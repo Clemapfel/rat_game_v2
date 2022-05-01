@@ -5,6 +5,18 @@
 
 abstract type AbstractEntity end
 
+# declare base stat
+struct BaseStats
+
+    hp_base::Int64
+    ap_base::Int64
+
+    attack_base::Int64
+    defense_base::Int64
+    speed_base::Int64
+end
+@public BaseStats
+
 # declare possible stat changes
 @enum StatChange begin
 
