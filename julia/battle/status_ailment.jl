@@ -24,81 +24,236 @@ abstract type AbstractEntity end
 end
 export StatusAilment
 
-# apply status ailment
+# constant placeholder for no effect
+const NO_TURN_EFFECT = (_::AbstractEntity) -> (return nothing)
 
-TODO do this with multiple dispatch
-function inflict(e::AbstractEntity, status::StatusAilment)
+# status state used for entities
+mutable struct StatusState
 
-    if (e.status == DEAD)
-        return
-    end
+    turn_effect::Function
 
-    # death overwrites
-    if status == DEAD
-        e.status = DEAD
-        e.status_stat_change = StatChange::ZERO
-        e.status_turn_effect = (_) -> nothing
-        return
-    end
+    attack_factor::Float32
+    defense_factor::Float32
+    speed_factor::Float32
 
-    # knocked out overwrite
-    if status == KNOCKED_OUT
-        e.status = KNOCKED_OUT
-        e.status_turn_effect = (_) -> nothing
-        return
-    end
+    stunned_counter::Int64
+    asleep_counter::Int64
+    blinded_counter::Int64
+    at_risk_counter::Int64
 
-    # fire + ice = cure
-    if status == BURNED && (e.status == CHILLED || e.status == FROZEN)
-        cure(e)
-        return
-    end
-
-    if (status == CHILLED || status == FROZEN) && e.status == BURNED
-        cure(e)
-        return
-    end
-
-    # chilled + chilled = frozen
-    if status == CHILLED && e.status == CHILLED
-        e.status = FROZEN
-        e.status_turn_effect = function (x::AbstractEntity)
-
-        end
-    end
-
-    # cant have multiple
-    if e.status != NO_STATUS
-        return
-    end
-
-    # burn
-    if status == BURNED
-        e.status = BURNED
-        e.status_stat_change = MINUS_1
-        e.status_turn_effect = function (x::AbstractEntity)
-            deal_damage(x, (1 / 16) * x.hp_base)
-        end
-    end
-
-    # poison
-    if status == POISONED
-        e.status = POISONED
-        e.status_stat_change = ZERO
-        e.status_turn_effect = function (x::AbstractEntity)
-            deal_damage(x, (1 / 8) * x.hp_base)
-        end
-    end
-
-    # chill
-
+    StatusState() = new(NO_TURN_EFFECT, 1.0, 1.0, 1.0, -1, -1, -1, -1)
 end
-export inflict
+
+# clear status state
+function reset!(state::StatusState)
+
+    state.turn_effect = NO_TURN_EFFECT
+
+    state.attack_factor = 1
+    state.defense_factor = 1
+    state.speed_factor = 1
+
+    state.stunned_counter = -1
+    state.asleep_counter = -1
+    state.blinded_counter = -1
+    state.at_risk_counter = -1
+end
 
 # remove status ailment
 function cure(e::AbstractEntity)
 
+    e.status = NO_STATUS
+    reset!(e.status_state)
 end
+export cure
+
+# apply status ailment
+function inflict(e::AbstractEntity, s::StatusAilment) ::Nothing
+
+    if s == DEAD
+        inflict_dead(e)
+    elseif s == KNOCKED_OUT
+        inflict_knocked_out(e)
+    elseif s == AT_RISK
+        inflict_at_risk(e)
+    elseif s == STUNNED
+        inflict_stunned(e)
+    elseif s == ASLEEP
+        inflict_asleep(e)
+    elseif s == POISONED
+        inflict_poisoned(e)
+    elseif s == BURNED
+        inflict_burned(e)
+    elseif s == CHILLED
+        inflict_chilled(e)
+    elseif s == FROZEN
+        inflict_frozen(e)
+    elseif s == NO_STATUS
+        cure(e)
+    end
+end
+export inflict
+
+# kill entity
+function inflict_dead(x::AbstractEntity) ::Nothing
+
+    reset!(x.status_state)
+    x.status = DEAD
+    return nothing
+end
+export inflict_dead
+
+# knock out
+function inflict_knocked_out(x::AbstractEntity) ::Nothing
+
+    if x.status != DEAD
+        reset!(x.status_state)
+        x.status = KNOCKED_OUT
+    end
+    return nothing
+end
+export inflict_knocked_out
+
+# at risk
+function inflict_at_risk(x::AbstractEntity) ::Nothing
+
+    if x.status == NO_STATUS
+
+        reset!(x.status_state)
+        x.status = AT_RISK
+        x.status_state.at_risk_counter = 0
+
+        # cure after 3 turns
+        x.status_state.turn_effect = function (x::AbstractEntity)
+            x.status_state.at_risk_counter += 1
+            if x.status_state.at_risk_counter == 3
+               cure(x)
+            end
+        end
+    end
+    return nothing
+end
+export inflict_at_risk
+
+# asleep
+function inflict_asleep(x::AbstractEntity) ::Nothing
+
+    if x.status == NO_STATUS
+
+        reset!(x.status_state)
+        x.status = ASLEEP
+        x.status_state.asleep_counter = 0
+
+        # 50% chance to wake up, max 4 turns
+        x.status_state.turn_effect = function (x::AbstractEntity)
+
+            x.status_state.asleep_counter += 1
+
+            if RNG.toss_coin() || x.status_state.asleep_counter == 4
+                cure(x)
+            end
+        end
+    end
+    return nothing
+end
+export inflict_asleep
+
+# poison
+function inflict_poisoned(x::AbstractEntity) ::Nothing
+
+    if x.status == NO_STATUS
+
+        reset!(x.status_state)
+        x.status = POISONED
+
+        # deal 1/8th per turn
+        x.status_state.turn_effect = function (x::AbstractEntity)
+            deal_damage(x, (1/8) * x.hp_base)
+        end
+    end
+    return nothing
+end
+export inflict_poisoned
+
+# blinded
+function inflict_blinded(x::AbstractEntity) ::Nothing
+
+    if x.status == NO_STATUS
+
+        reset!(x.status_state)
+        x.status = BLINDED
+
+        # set attack to 0, lasts for 3 turns
+        x.status_state.attack_factor = 0
+        x.status_state_turn_effect = function (x::AbstractEntity)
+            x.status_state.blinded_counter += 1
+            if (x.status_state.blinded_counter == 3)
+                cure(x)
+            end
+        end
+    end
+    return nothing
+end
+export inflict_blinded
+
+# burned
+function inflict_burned(x::AbstractEntity) ::Nothing
+
+    # fire + ice = cure
+    if x.status == CHILLED || x.status == FROZEN
+        cure(x)
+    elseif x.status == NO_STATUS
+        reset!(x.status_state)
+        x.status = BURNED
+
+        # def * 0.5, inflict 1/16th each turn
+        x.status_state.defense_factor = 0.5
+        x.status_state.turn_effect = function (x::AbstractEntity)
+            deal_damage(x, (1/16) * x.hp_base)
+        end
+    end
+    return nothing
+end
+export inflict_burned
+
+# chilled
+function inflict_chilled(x::AbstractEntity) ::Nothing
+
+    # chilled + chilled = frozen
+    if x.status == CHILLED
+       inflict_frozen(x)
+
+    # fire + ice = cure
+    elseif x.status == BURNED
+        cure(x)
+
+    elseif x.status == NO_STATUS
+        reset!(x.status_state)
+        x.status = CHILLED
+
+        # speed * 0.5
+        x.status_state.speed_factor = 0.5
+    end
+    return nothing
+end
+export inflict_chilled
+
+# frozen
+function inflict_frozen(x::AbstractEntity) ::Nothing
+
+    # fire + ice = cure
+    if x.status == BURNED
+        cure(x)
+    elseif x.status == NO_STATUS || x.status == CHILLED
+        reset!(x.status_state)
+        x.status = FROZEN
+
+        # speed = 0
+        x.status_state.speed_factor = 0
+    end
+    return nothing
+end
+export inflict_frozen
 
 # to string when status is reported
 function status_to_adjective(s::StatusAilment) ::String
