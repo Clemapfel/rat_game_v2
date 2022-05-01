@@ -8,14 +8,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
 ### VARS ###
 
 set(DEPENDENCY_PREFIX ${CMAKE_SOURCE_DIR}/dependencies)
+set(JULIA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/julia)
+
+configure_file("${CMAKE_SOURCE_DIR}/resource_path.hpp.in" "${CMAKE_SOURCE_DIR}/resource_path.hpp" @ONLY)
 
 ### TARGETS ###
 
-add_library(rat_game main.cpp)
+add_library(rat_game
+
+    include/initialize.hpp
+        include/initialize.hpp .src/initialize.cpp)
 
 ### INCLUDE DIRECTORIES ##
 
 target_include_directories(rat_game PUBLIC
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
     ${DEPENDENCY_PREFIX}/jluna/
     ${DEPENDENCY_PREFIX}/SFML/include
     ${DEPENDENCY_PREFIX}/julia/include/julia

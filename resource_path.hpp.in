@@ -1,0 +1,11 @@
+// 
+// Copyright 2022 Clemens Cords
+// Created on 01.05.22 by clem (mail@clemens-cords.com)
+//
+
+#pragma once
+
+namespace game
+{
+    const std::string JULIA_INCLUDE_PATH = "@JULIA_INCLUDE_PATH@";
+}

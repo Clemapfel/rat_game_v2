@@ -6,12 +6,15 @@
 #include <jluna.hpp>
 #include <SFML/Window.hpp>
 #include <box2d/b2_api.h>
+#include <resource_path.hpp>
+
+#include <initialize.hpp>
+
+using namespace game;
 
 int main()
 {
-    jluna::initialize();
-    jluna::Base["println"]("hello julia");
-
+    initialize();
     return 0;
 }
 
