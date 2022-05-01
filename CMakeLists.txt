@@ -49,5 +49,15 @@ target_link_libraries(rat_game PUBLIC
 
 ### TESTS ###
 
-add_executable(main main.cpp)
+add_executable(main main.cpp )
 target_link_libraries(main PRIVATE rat_game)
+
+include(CTest)
+
+option(BUILD_TESTING "enable unit tests" ON)
+if (BUILD_TESTING)
+
+    add_executable(status_ailments_jl .test/julia_side.cpp)
+    target_link_libraries(status_ailments_jl PRIVATE rat_game)
+    add_test(NAME status_ailments_jl COMMAND status_ailments_jl)
+endif()

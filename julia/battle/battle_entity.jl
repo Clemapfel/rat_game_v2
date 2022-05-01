@@ -26,7 +26,7 @@ mutable struct Entity <: AbstractEntity
     speed_change::StatChange
 
     status::StatusAilment
-    status_turn_effect::Function
+    status_state::StatusState
 
     is_enemy::Bool
 end

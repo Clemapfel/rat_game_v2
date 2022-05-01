@@ -5,17 +5,20 @@
 
 # declare module game
 module game
-using Main
+
+    include("./common/random.jl")
 
     # declare module battle
     module battle
-    using Main
 
         include("./battle/stat_change.jl")
         include("./battle/status_ailment.jl")
         include("./battle/battle_entity.jl")
     end
 end
+
+using Main.game
+using Main.game.battle
 
 println("[LOG] initialization successfull")
 return true
