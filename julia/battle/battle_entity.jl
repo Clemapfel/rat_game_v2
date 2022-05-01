@@ -29,4 +29,17 @@ mutable struct Entity <: AbstractEntity
     status_state::StatusState
 
     is_enemy::Bool
+
+    # default ctor
+    function Entity(id::String)
+        return new(id, id,
+            100, 100,
+            100, 100,
+            50, 50, 50,
+            ZERO, ZERO, ZERO,
+            NO_STATUS, StatusState(),
+            false);
+    end
+    export Entity
 end
+

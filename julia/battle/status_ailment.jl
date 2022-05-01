@@ -22,10 +22,10 @@ abstract type AbstractEntity end
     CHILLED = 8
     FROZEN = 9
 end
-export StatusAilment
+@export_enum StatusAilment
 
-# constant placeholder for no effect
-const NO_TURN_EFFECT = (_::AbstractEntity) -> (return nothing)
+# placeholder for no effect
+NO_TURN_EFFECT(_::AbstractEntity) = return nothing
 
 # status state used for entities
 mutable struct StatusState

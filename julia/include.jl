@@ -6,10 +6,12 @@
 # declare module game
 module game
 
+    include("./common/macros.jl")
     include("./common/random.jl")
 
     # declare module battle
     module battle
+        using Main.game
 
         include("./battle/stat_change.jl")
         include("./battle/status_ailment.jl")
