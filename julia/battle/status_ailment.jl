@@ -26,6 +26,7 @@ end
 
 # placeholder for no effect
 NO_TURN_EFFECT(_::AbstractEntity) = return nothing
+@private NO_TURN_EFFECT
 
 # status state used for entities
 mutable struct StatusState
@@ -43,9 +44,10 @@ mutable struct StatusState
 
     StatusState() = new(NO_TURN_EFFECT, 1.0, 1.0, 1.0, -1, -1, -1, -1)
 end
+@private StatusState
 
 # clear status state
-function reset!(state::StatusState)
+function reset!(state::StatusState) ::Nothing
 
     state.turn_effect = NO_TURN_EFFECT
 
@@ -57,15 +59,19 @@ function reset!(state::StatusState)
     state.asleep_counter = -1
     state.blinded_counter = -1
     state.at_risk_counter = -1
+
+    return nothing
 end
+@private reset!
 
 # remove status ailment
-function cure(e::AbstractEntity)
+function cure(e::AbstractEntity) ::Nothing
 
     e.status = NO_STATUS
     reset!(e.status_state)
+    return nothing
 end
-export cure
+@public cure
 
 # apply status ailment
 function inflict(e::AbstractEntity, s::StatusAilment) ::Nothing
@@ -91,8 +97,9 @@ function inflict(e::AbstractEntity, s::StatusAilment) ::Nothing
     elseif s == NO_STATUS
         cure(e)
     end
+    return nothing
 end
-export inflict
+@public inflict
 
 # kill entity
 function inflict_dead(x::AbstractEntity) ::Nothing
@@ -101,7 +108,7 @@ function inflict_dead(x::AbstractEntity) ::Nothing
     x.status = DEAD
     return nothing
 end
-export inflict_dead
+@public inflict_dead
 
 # knock out
 function inflict_knocked_out(x::AbstractEntity) ::Nothing
@@ -112,7 +119,7 @@ function inflict_knocked_out(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_knocked_out
+@public inflict_knocked_out
 
 # at risk
 function inflict_at_risk(x::AbstractEntity) ::Nothing
@@ -133,7 +140,7 @@ function inflict_at_risk(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_at_risk
+@public inflict_at_risk
 
 # asleep
 function inflict_asleep(x::AbstractEntity) ::Nothing
@@ -156,7 +163,7 @@ function inflict_asleep(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_asleep
+@public inflict_asleep
 
 # poison
 function inflict_poisoned(x::AbstractEntity) ::Nothing
@@ -173,7 +180,7 @@ function inflict_poisoned(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_poisoned
+@public inflict_poisoned
 
 # blinded
 function inflict_blinded(x::AbstractEntity) ::Nothing
@@ -185,7 +192,7 @@ function inflict_blinded(x::AbstractEntity) ::Nothing
 
         # set attack to 0, lasts for 3 turns
         x.status_state.attack_factor = 0
-        x.status_state_turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractEntity)
             x.status_state.blinded_counter += 1
             if (x.status_state.blinded_counter == 3)
                 cure(x)
@@ -194,7 +201,7 @@ function inflict_blinded(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_blinded
+@public inflict_blinded
 
 # burned
 function inflict_burned(x::AbstractEntity) ::Nothing
@@ -214,7 +221,7 @@ function inflict_burned(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_burned
+@public inflict_burned
 
 # chilled
 function inflict_chilled(x::AbstractEntity) ::Nothing
@@ -236,7 +243,7 @@ function inflict_chilled(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_chilled
+@public inflict_chilled
 
 # frozen
 function inflict_frozen(x::AbstractEntity) ::Nothing
@@ -253,7 +260,7 @@ function inflict_frozen(x::AbstractEntity) ::Nothing
     end
     return nothing
 end
-export inflict_frozen
+@public inflict_frozen
 
 # to string when status is reported
 function status_to_adjective(s::StatusAilment) ::String
@@ -281,7 +288,7 @@ function status_to_adjective(s::StatusAilment) ::String
         return ""
     end
 end
-export status_to_adjective
+@public status_to_adjective
 
 # to string when status is inflicted
 function status_to_verb(s::StatusAilment) ::String
@@ -309,7 +316,7 @@ function status_to_verb(s::StatusAilment) ::String
         return ""
     end
 end
-export status_to_verb_present
+@public status_to_verb_present
 
 # to string when status is cured
 function status_cure_to_verb(s::StatusAilment) ::String
@@ -337,4 +344,4 @@ function status_cure_to_verb(s::StatusAilment) ::String
         return ""
     end
 end
-export status_cure_to_verb
+@public status_cure_to_verb

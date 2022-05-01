@@ -9,7 +9,6 @@
 int main()
 {
     jluna::initialize(1, false);
-    return not jluna::unbox<bool>(
-        jluna::safe_eval_file(game::JULIA_INCLUDE_PATH + "/test.jl")
-    );
+    jluna::safe_eval_file(game::JULIA_INCLUDE_PATH + "/test.jl");
+    return 0;
 }

@@ -11,8 +11,8 @@ mutable struct Entity <: AbstractEntity
     name::String    # cleartext name
     id::String      # internal id
 
-    hp_base::Integer
-    ap_base::Integer
+    hp_base::Integer    # base hp value
+    ap_base::Integer    # base ap value
 
     hp::Integer
     ap::Integer
@@ -40,6 +40,6 @@ mutable struct Entity <: AbstractEntity
             NO_STATUS, StatusState(),
             false);
     end
-    export Entity
 end
+@public Entity
 

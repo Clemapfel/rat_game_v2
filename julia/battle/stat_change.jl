@@ -18,6 +18,7 @@ abstract type AbstractEntity end
     MINUS_3 = -3
     MINUS_4 = -4
 end
+@export_enum StatChange
 
 # convert enum to factor applied to stat
 function stat_change_to_factor(s::StatChange) ::Float32
@@ -42,6 +43,7 @@ function stat_change_to_factor(s::StatChange) ::Float32
         return 0.0 # decay after 1 turn to -3
     end
 end
+@public stat_change_to_factor
 
 # add +1 to stat change
 function raise(s::StatChange) ::StatChange
@@ -50,6 +52,7 @@ function raise(s::StatChange) ::StatChange
     value = min(value, 4)
     return StatChange(value)
 end
+@public raise
 
 # add -1 to stat change
 function lower(s::StatChange) ::StatChange
@@ -58,13 +61,16 @@ function lower(s::StatChange) ::StatChange
     value = max(value, -4)
     return StatChange(value)
 end
+@public lower
 
 # add +1 to given stat
 raise_attack!(e::AbstractEntity) = e.attack_change = raise(e.attack_change)
 raise_defense!(e::AbstractEntity) = e.defense_change = raise(e.defense_change)
 raise_speed!(e::AbstractEntity) = e.speed_change = raise(e.speed_change)
+@public(raise_attack!, raise_defense!, raise_speed!)
 
 # add -1 to given stat
 lower_attack!(e::AbstractEntity) = e.attack_change = lower(e.attack_change)
 lower_defense!(e::AbstractEntity) = e.defense_change = lower(e.defense_change)
 lower_speed!(e::AbstractEntity) = e.speed_change = lower(e.speed_change)
+@public(lower_attack!, lower_defense!, lower_speed!)
