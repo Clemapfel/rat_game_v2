@@ -3,7 +3,7 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
-@include("./stat_change.jl")
+include("./stat_change.jl")
 
 abstract type AbstractEntity end
 
@@ -25,22 +25,73 @@ end
 export StatusAilment
 
 # apply status ailment
+
+TODO do this with multiple dispatch
 function inflict(e::AbstractEntity, status::StatusAilment)
 
     if (e.status == DEAD)
         return
     end
 
-    if (status == DEAD)
+    # death overwrites
+    if status == DEAD
         e.status = DEAD
         e.status_stat_change = StatChange::ZERO
-        e.status_turn_effect = (x) -> ()
+        e.status_turn_effect = (_) -> nothing
+        return
     end
 
-    if (status == KNOCKED_OUT)
+    # knocked out overwrite
+    if status == KNOCKED_OUT
         e.status = KNOCKED_OUT
-        e.status_stat_change = StatChange::ZERO
+        e.status_turn_effect = (_) -> nothing
+        return
     end
+
+    # fire + ice = cure
+    if status == BURNED && (e.status == CHILLED || e.status == FROZEN)
+        cure(e)
+        return
+    end
+
+    if (status == CHILLED || status == FROZEN) && e.status == BURNED
+        cure(e)
+        return
+    end
+
+    # chilled + chilled = frozen
+    if status == CHILLED && e.status == CHILLED
+        e.status = FROZEN
+        e.status_turn_effect = function (x::AbstractEntity)
+
+        end
+    end
+
+    # cant have multiple
+    if e.status != NO_STATUS
+        return
+    end
+
+    # burn
+    if status == BURNED
+        e.status = BURNED
+        e.status_stat_change = MINUS_1
+        e.status_turn_effect = function (x::AbstractEntity)
+            deal_damage(x, (1 / 16) * x.hp_base)
+        end
+    end
+
+    # poison
+    if status == POISONED
+        e.status = POISONED
+        e.status_stat_change = ZERO
+        e.status_turn_effect = function (x::AbstractEntity)
+            deal_damage(x, (1 / 8) * x.hp_base)
+        end
+    end
+
+    # chill
+
 end
 export inflict
 

@@ -14,6 +14,9 @@ mutable struct Entity <: AbstractEntity
     hp_base::Integer
     ap_base::Integer
 
+    hp::Integer
+    ap::Integer
+
     attack_base::Integer
     defense_base::Integer
     speed_base::Integer
@@ -23,7 +26,6 @@ mutable struct Entity <: AbstractEntity
     speed_change::StatChange
 
     status::StatusAilment
-    status_stat_change::StatChange
     status_turn_effect::Function
 
     is_enemy::Bool
