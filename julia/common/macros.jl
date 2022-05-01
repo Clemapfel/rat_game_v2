@@ -25,3 +25,13 @@ macro private(sym::Symbol)
     # noop
 end
 export @private
+
+# type or function alias
+macro alias(a::Symbol, b::Symbol)
+    __module__.eval(Expr(Symbol("="), a, b))
+
+    if (Base.isexported(__module__, b))
+        __module__.eval(Expr(:export, a))
+    end
+end
+export @alias

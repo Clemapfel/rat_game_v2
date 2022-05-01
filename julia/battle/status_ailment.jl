@@ -25,7 +25,7 @@ end
 @export_enum StatusAilment
 
 # placeholder for no effect
-NO_TURN_EFFECT(_::AbstractEntity) = return nothing
+NO_TURN_EFFECT(_::AbstractEntity) = return
 @private NO_TURN_EFFECT
 
 # status state used for entities
@@ -61,7 +61,7 @@ function reset!(state::StatusState) ::Nothing
     state.blinded_counter = -1
     state.at_risk_counter = -1
 
-    return nothing
+    return
 end
 @private reset!
 
@@ -70,7 +70,7 @@ function cure(e::AbstractEntity) ::Nothing
 
     e.status_state.status = NO_STATUS
     reset!(e.status_state)
-    return nothing
+    return
 end
 @public cure
 
@@ -98,7 +98,7 @@ function inflict(e::AbstractEntity, s::StatusAilment) ::Nothing
     elseif s == NO_STATUS
         cure(e)
     end
-    return nothing
+    return
 end
 @public inflict
 
@@ -107,7 +107,7 @@ function inflict_dead(x::AbstractEntity) ::Nothing
 
     reset!(x.status_state)
     x.status_state.status= DEAD
-    return nothing
+    return
 end
 @public inflict_dead
 
@@ -118,7 +118,7 @@ function inflict_knocked_out(x::AbstractEntity) ::Nothing
         reset!(x.status_state)
         x.status_state.status= KNOCKED_OUT
     end
-    return nothing
+    return
 end
 @public inflict_knocked_out
 
@@ -139,7 +139,7 @@ function inflict_at_risk(x::AbstractEntity) ::Nothing
             end
         end
     end
-    return nothing
+    return
 end
 @public inflict_at_risk
 
@@ -162,7 +162,7 @@ function inflict_asleep(x::AbstractEntity) ::Nothing
             end
         end
     end
-    return nothing
+    return
 end
 @public inflict_asleep
 
@@ -179,7 +179,7 @@ function inflict_poisoned(x::AbstractEntity) ::Nothing
             deal_damage(x, (1/8) * x.hp_base)
         end
     end
-    return nothing
+    return
 end
 @public inflict_poisoned
 
@@ -200,7 +200,7 @@ function inflict_blinded(x::AbstractEntity) ::Nothing
             end
         end
     end
-    return nothing
+    return
 end
 @public inflict_blinded
 
@@ -220,7 +220,7 @@ function inflict_burned(x::AbstractEntity) ::Nothing
             deal_damage(x, (1/16) * x.hp_base)
         end
     end
-    return nothing
+    return
 end
 @public inflict_burned
 
@@ -242,7 +242,7 @@ function inflict_chilled(x::AbstractEntity) ::Nothing
         # speed * 0.5
         x.status_state.speed_factor = 0.5
     end
-    return nothing
+    return
 end
 @public inflict_chilled
 
@@ -259,7 +259,7 @@ function inflict_frozen(x::AbstractEntity) ::Nothing
         # speed = 0
         x.status_state.speed_factor = 0
     end
-    return nothing
+    return
 end
 @public inflict_frozen
 

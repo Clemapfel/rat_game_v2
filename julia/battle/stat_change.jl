@@ -8,12 +8,12 @@ abstract type AbstractEntity end
 # declare base stat
 struct BaseStats
 
-    hp_base::Int64
-    ap_base::Int64
+    hp::Int64
+    ap::Int64
 
-    attack_base::Int64
-    defense_base::Int64
-    speed_base::Int64
+    attack::Int64
+    defense::Int64
+    speed::Int64
 end
 @public BaseStats
 
