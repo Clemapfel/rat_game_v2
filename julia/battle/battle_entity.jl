@@ -5,11 +5,14 @@
 
 abstract type AbstractEntity end
 
+# moveset type, dict of mover + number of stacks left (-1 for infinite)
+@alias Moveset Dict{String, Pair{Move, Int64}}
+
 # declare battle entity, player or enemy
 mutable struct Entity <: AbstractEntity
 
-    name::String    # cleartext name
     id::String      # internal id
+    name::String    # cleartext name
     is_enemy::Bool  # is party
 
     # stats
@@ -23,10 +26,16 @@ mutable struct Entity <: AbstractEntity
     defense_change::StatChange
     speed_change::StatChange
 
+    # primed type
+    primed::ComboType
+
     # status ailments
     status_state::StatusState
 
-    # default ctor
+    # moveset and stacks
+    moveset::Moveset
+
+    # default ctor for debugging
     function Entity(id::String)
 
         base = BaseStats(100, 100, 50, 50, 50)
@@ -34,8 +43,25 @@ mutable struct Entity <: AbstractEntity
             id, id, false,
             base,
             base.hp, base.ap,
-            ZERO, ZERO, ZERO,
-            StatusState());
+            ZERO, ZERO, ZERO, NO_TYPE,
+            StatusState(), Moveset());
+    end
+
+    # ctor
+    function Entity(;
+        name::String,
+        id::String,
+        is_enemy::Bool,
+        hp_base::Integer,
+        ap_base::Integer,
+        attack_base::Integer,
+        defense_base::Integer,
+        speed_base::Integer)
+
+        return new(id, name, is_enemy,
+            BaseStats(hp_base, ap_base, attack_base, defense_base, speed_base),
+            ZERO, ZERO, ZERO, NO_TYPE,
+            StatusState(), Moveset())
     end
 end
 @public Entity

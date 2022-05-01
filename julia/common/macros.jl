@@ -27,8 +27,20 @@ end
 export @private
 
 # type or function alias
+macro alias(a::Symbol, b::Expr)
+
+    original =__module__.eval(b)
+    __module__.eval(Expr(Symbol("="), a, original))
+
+    if (Base.isexported(__module__, Symbol(original)))
+        __module__.eval(Expr(:export, a))
+    end
+end
+
 macro alias(a::Symbol, b::Symbol)
-    __module__.eval(Expr(Symbol("="), a, b))
+
+    original =__module__.eval(b)
+    __module__.eval(Expr(Symbol("="), a, original))
 
     if (Base.isexported(__module__, b))
         __module__.eval(Expr(:export, a))

@@ -15,6 +15,7 @@ module game
 
         include("./battle/stat_change.jl")
         include("./battle/status_ailment.jl")
+        include("./battle/moves.jl")
         include("./battle/battle_entity.jl")
     end
 end
