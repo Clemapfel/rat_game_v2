@@ -3,8 +3,12 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
+@include("./stat_change.jl")
+
+abstract type AbstractEntity end
+
 # declare status ailments
-@enum STATUS_AILMENT begin
+@enum StatusAilment begin
 
     DEAD = -2
     KNOCKED_OUT = -1
@@ -18,10 +22,35 @@
     CHILLED = 8
     FROZEN = 9
 end
-export STATUS_AILMENT
+export StatusAilment
+
+# apply status ailment
+function inflict(e::AbstractEntity, status::StatusAilment)
+
+    if (e.status == DEAD)
+        return
+    end
+
+    if (status == DEAD)
+        e.status = DEAD
+        e.status_stat_change = StatChange::ZERO
+        e.status_turn_effect = (x) -> ()
+    end
+
+    if (status == KNOCKED_OUT)
+        e.status = KNOCKED_OUT
+        e.status_stat_change = StatChange::ZERO
+    end
+end
+export inflict
+
+# remove status ailment
+function cure(e::AbstractEntity)
+
+end
 
 # to string when status is reported
-function status_to_adjective(s::STATUS_AILMENT) ::String
+function status_to_adjective(s::StatusAilment) ::String
 
     if s == DEAD
         return "dead"
@@ -49,7 +78,7 @@ end
 export status_to_adjective
 
 # to string when status is inflicted
-function status_to_verb(s::STATUS_AILMENT) ::String
+function status_to_verb(s::StatusAilment) ::String
 
     if s == DEAD
         return "died"
@@ -77,7 +106,7 @@ end
 export status_to_verb_present
 
 # to string when status is cured
-function status_cure_to_verb(s::STATUS_AILMENT) ::String
+function status_cure_to_verb(s::StatusAilment) ::String
 
     if s == DEAD
         return "came back from the dead"
