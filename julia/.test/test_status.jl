@@ -20,67 +20,67 @@
         @test e.status_state.at_risk_counter == -1
     end
 
-    inflict_at_risk(e)
+    inflict_at_risk!(e)
     @test e.status_state.status== AT_RISK
-    cure(e)
+    cure!(e)
 
-    inflict_asleep(e)
+    inflict_asleep!(e)
     @test e.status_state.status== ASLEEP
-    cure(e)
+    cure!(e)
 
     inflict_blinded(e)
     @test e.status_state.status== BLINDED
     @test e.status_state.attack_factor == 0
-    cure(e)
+    cure!(e)
 
-    inflict_poisoned(e)
+    inflict_poisoned!(e)
     @test e.status_state.status== POISONED
-    cure(e)
+    cure!(e)
 
-    inflict_burned(e)
+    inflict_burned!(e)
     @test e.status_state.status== BURNED
     @test e.status_state.defense_factor == 0.5
-    cure(e)
+    cure!(e)
 
-    inflict_chilled(e)
+    inflict_chilled!(e)
     @test e.status_state.status== CHILLED
     @test e.status_state.speed_factor == 0.5
-    cure(e)
+    cure!(e)
 
-    inflict_frozen(e)
+    inflict_frozen!(e)
     @test e.status_state.status== FROZEN
     @test e.status_state.speed_factor == 0
-    cure(e)
+    cure!(e)
 
-    inflict_burned(e)
-    inflict_chilled(e)
+    inflict_burned!(e)
+    inflict_chilled!(e)
     @test e.status_state.status== NO_STATUS
-    cure(e)
+    cure!(e)
 
-    inflict_chilled(e)
-    inflict_burned(e)
+    inflict_chilled!(e)
+    inflict_burned!(e)
     @test e.status_state.status== NO_STATUS
-    cure(e)
+    cure!(e)
 
-    inflict_burned(e)
-    inflict_frozen(e)
+    inflict_burned!(e)
+    inflict_frozen!(e)
     @test e.status_state.status== NO_STATUS
-    cure(e)
+    cure!(e)
 
-    inflict_frozen(e)
-    inflict_burned(e)
+    inflict_frozen!(e)
+    inflict_burned!(e)
     @test e.status_state.status== NO_STATUS
-    cure(e)
+    cure!(e)
 
-    inflict_chilled(e)
-    inflict_chilled(e)
+    inflict_chilled!(e)
+    inflict_chilled!(e)
     @test e.status_state.status== FROZEN
-    cure(e)
+    cure!(e)
 
-    inflict_chilled(e)
-    inflict_frozen(e)
+    inflict_chilled!(e)
+    inflict_frozen!(e)
     @test e.status_state.status== FROZEN
-    cure(e)
+    cure!(e)
 end
 
 return true

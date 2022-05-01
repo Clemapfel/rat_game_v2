@@ -66,53 +66,53 @@ end
 @private reset!
 
 # remove status ailment
-function cure(e::AbstractEntity) ::Nothing
+function cure!(e::AbstractEntity) ::Nothing
 
     e.status_state.status = NO_STATUS
     reset!(e.status_state)
     return
 end
-@public cure
+@public cure!
 
 # apply status ailment
-function inflict(e::AbstractEntity, s::StatusAilment) ::Nothing
+function inflict_status!(e::AbstractEntity, s::StatusAilment) ::Nothing
 
     if s == DEAD
-        inflict_dead(e)
+        inflict_dead!(e)
     elseif s == KNOCKED_OUT
-        inflict_knocked_out(e)
+        inflict_knocked_out!(e)
     elseif s == AT_RISK
-        inflict_at_risk(e)
+        inflict_at_risk!(e)
     elseif s == STUNNED
-        inflict_stunned(e)
+        inflict_stunned!(e)
     elseif s == ASLEEP
-        inflict_asleep(e)
+        inflict_asleep!(e)
     elseif s == POISONED
-        inflict_poisoned(e)
+        inflict_poisoned!(e)
     elseif s == BURNED
-        inflict_burned(e)
+        inflict_burned!(e)
     elseif s == CHILLED
-        inflict_chilled(e)
+        inflict_chilled!(e)
     elseif s == FROZEN
-        inflict_frozen(e)
+        inflict_frozen!(e)
     elseif s == NO_STATUS
-        cure(e)
+        cure!(e)
     end
     return
 end
-@public inflict
+@public inflict_status!
 
 # kill entity
-function inflict_dead(x::AbstractEntity) ::Nothing
+function inflict_dead!(x::AbstractEntity) ::Nothing
 
     reset!(x.status_state)
     x.status_state.status= DEAD
     return
 end
-@public inflict_dead
+@public inflict_dead!
 
 # knock out
-function inflict_knocked_out(x::AbstractEntity) ::Nothing
+function inflict_knocked_out!(x::AbstractEntity) ::Nothing
 
     if x.status_state.status!= DEAD
         reset!(x.status_state)
@@ -120,10 +120,10 @@ function inflict_knocked_out(x::AbstractEntity) ::Nothing
     end
     return
 end
-@public inflict_knocked_out
+@public inflict_knocked_out!
 
 # at risk
-function inflict_at_risk(x::AbstractEntity) ::Nothing
+function inflict_at_risk!(x::AbstractEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -131,20 +131,20 @@ function inflict_at_risk(x::AbstractEntity) ::Nothing
         x.status_state.status= AT_RISK
         x.status_state.at_risk_counter = 0
 
-        # cure after 3 turns
+        # cure! after 3 turns
         x.status_state.turn_effect = function (x::AbstractEntity)
             x.status_state.at_risk_counter += 1
             if x.status_state.at_risk_counter == 3
-               cure(x)
+               cure!(x)
             end
         end
     end
     return
 end
-@public inflict_at_risk
+@public inflict_at_risk!
 
 # asleep
-function inflict_asleep(x::AbstractEntity) ::Nothing
+function inflict_asleep!(x::AbstractEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -158,16 +158,16 @@ function inflict_asleep(x::AbstractEntity) ::Nothing
             x.status_state.asleep_counter += 1
 
             if RNG.toss_coin() || x.status_state.asleep_counter == 4
-                cure(x)
+                cure!(x)
             end
         end
     end
     return
 end
-@public inflict_asleep
+@public inflict_asleep!
 
 # poison
-function inflict_poisoned(x::AbstractEntity) ::Nothing
+function inflict_poisoned!(x::AbstractEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -181,7 +181,7 @@ function inflict_poisoned(x::AbstractEntity) ::Nothing
     end
     return
 end
-@public inflict_poisoned
+@public inflict_poisoned!
 
 # blinded
 function inflict_blinded(x::AbstractEntity) ::Nothing
@@ -196,7 +196,7 @@ function inflict_blinded(x::AbstractEntity) ::Nothing
         x.status_state.turn_effect = function (x::AbstractEntity)
             x.status_state.blinded_counter += 1
             if (x.status_state.blinded_counter == 3)
-                cure(x)
+                cure!(x)
             end
         end
     end
@@ -205,11 +205,11 @@ end
 @public inflict_blinded
 
 # burned
-function inflict_burned(x::AbstractEntity) ::Nothing
+function inflict_burned!(x::AbstractEntity) ::Nothing
 
-    # fire + ice = cure
+    # fire + ice = cure!
     if x.status_state.status== CHILLED || x.status_state.status== FROZEN
-        cure(x)
+        cure!(x)
     elseif x.status_state.status== NO_STATUS
         reset!(x.status_state)
         x.status_state.status= BURNED
@@ -222,18 +222,18 @@ function inflict_burned(x::AbstractEntity) ::Nothing
     end
     return
 end
-@public inflict_burned
+@public inflict_burned!
 
 # chilled
-function inflict_chilled(x::AbstractEntity) ::Nothing
+function inflict_chilled!(x::AbstractEntity) ::Nothing
 
     # chilled + chilled = frozen
     if x.status_state.status== CHILLED
-       inflict_frozen(x)
+       inflict_frozen!(x)
 
-    # fire + ice = cure
+    # fire + ice = cure!
     elseif x.status_state.status== BURNED
-        cure(x)
+        cure!(x)
 
     elseif x.status_state.status== NO_STATUS
         reset!(x.status_state)
@@ -244,14 +244,14 @@ function inflict_chilled(x::AbstractEntity) ::Nothing
     end
     return
 end
-@public inflict_chilled
+@public inflict_chilled!
 
 # frozen
-function inflict_frozen(x::AbstractEntity) ::Nothing
+function inflict_frozen!(x::AbstractEntity) ::Nothing
 
-    # fire + ice = cure
+    # fire + ice = cure!
     if x.status_state.status== BURNED
-        cure(x)
+        cure!(x)
     elseif x.status_state.status== NO_STATUS || x.status_state.status== CHILLED
         reset!(x.status_state)
         x.status_state.status= FROZEN
@@ -261,7 +261,7 @@ function inflict_frozen(x::AbstractEntity) ::Nothing
     end
     return
 end
-@public inflict_frozen
+@public inflict_frozen!
 
 # to string when status is reported
 function status_to_adjective(s::StatusAilment) ::String
@@ -319,7 +319,7 @@ function status_to_verb(s::StatusAilment) ::String
 end
 @public status_to_verb_present
 
-# to string when status is cured
+# to string when status is cure!d
 function status_cure_to_verb(s::StatusAilment) ::String
 
     if s == DEAD
@@ -341,7 +341,7 @@ function status_cure_to_verb(s::StatusAilment) ::String
     elseif s == FROZEN
         return "thawed and is no longer frozen"
     else
-        throw(AssertionError("in status_cure_to_verb: unreachable case"))
+        throw(AssertionError("in status_cure!_to_verb: unreachable case"))
         return ""
     end
 end

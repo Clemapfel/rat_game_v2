@@ -9,3 +9,4 @@ using Main.game.battle
 using Test
 
 include("./.test/test_status.jl")
+include("./.test/test_entity.jl")

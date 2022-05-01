@@ -54,15 +54,15 @@ end
 @public get_hp
 
 # ap
-function get_base_base(e::AbstractEntity) ::Int64
-    return e.base_stats.base
+function get_ap_base(e::AbstractEntity) ::Int64
+    return e.base_stats.ap
 end
-@public get_base_base
+@public get_ap_base
 
-function get_base(e::AbstractEntity) ::Int64
-    return e.base
+function get_ap(e::AbstractEntity) ::Int64
+    return e.ap
 end
-@public get_base
+@public get_ap
 
 # attack
 function get_attack_base(e::AbstractEntity) ::Int64
@@ -75,7 +75,7 @@ function get_attack(e::AbstractEntity) ::Int64
     value = get_attack_base(e)
     value *= stat_change_to_factor(e.attack_change)
     value *= e.status_state.attack_factor
-    return value
+    return (e.is_enemy ? floor(value) : ceil(value))
 end
 @public get_attack
 
@@ -90,7 +90,7 @@ function get_defense(e::AbstractEntity) ::Int64
     value = get_defense_base(e)
     value *= stat_change_to_factor(e.defense_change)
     value *= e.status_state.defense_factor
-    return value
+    return (e.is_enemy ? floor(value) : ceil(value))
 end
 @public get_defense
 
@@ -105,7 +105,7 @@ function get_speed(e::AbstractEntity) ::Int64
     value = get_speed_base(e)
     value *= stat_change_to_factor(e.speed_change)
     value *= e.status_state.speed_factor
-    return value
+    return (e.is_enemy ? floor(value) : ceil(value))
 end
 @public get_speed
 
@@ -134,21 +134,21 @@ end
 ### SETTER ###
 
 # hp
-function reduce_hp(e::AbstractEntity, value::Integer) ::Nothing
+function reduce_hp!(e::AbstractEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
 
     # kill if knocked out
     if get_status(e) == KNOCKED_OUT
-       inflict_status(e, DEAD)
+       inflict_status!(e, DEAD)
        return
     end
 
     # knock out if to 0
     if value >= get_hp(e)
         e.hp = 0
-        inflict_status(e, KNOCKED_OUT)
+        inflict_status!(e, KNOCKED_OUT)
         return
     end
 
@@ -156,48 +156,51 @@ function reduce_hp(e::AbstractEntity, value::Integer) ::Nothing
 
     # wake up if asleep
     if get_status(e) == ASLEEP
-       cure(e)
+       cure!(e)
     end
 
     return nothing
 end
-@public reduce_hp
-@alias deal_damage reduce_hp
+@public reduce_hp!
+@alias deal_damage! reduce_hp!
 
-function add_hp(e::AbstractEntity, value::Integer) ::Nothing
+function add_hp!(e::AbstractEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
 
     # res to 1 hp if knocked out
     if get_status(e) == KNOCKED_OUT
-        cure(e)
+        cure!(e)
         e.hp = 1
         return
     end
 
     base = get_hp_base(e)
     e.hp += (value + e.hp > base ? base - e.hp : value)
+    return nothing
 end
-@public add_hp
-@alias heal add_hp
+@public add_hp!
+@alias heal add_hp!
 
 # ap
-function reduce_ap(e::AbstractEntity, value::Integer) ::Nothing
+function reduce_ap!(e::AbstractEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
 
     e.ap -= (value > e.ap ? e.ap : value)
+    return nothing
 end
-@public reduce_ap
+@public reduce_ap!
 
-function add_ap(e::AbstractEntity, value::Integer) ::Nothing
+function add_ap!(e::AbstractEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
 
     base = get_ap_base(e)
     e.ap += (value + e.ap > base ? base - e.ap : value)
+    return
 end
-@public add_ap
+@public add_ap!
