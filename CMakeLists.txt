@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-volatile")
 
 set(DEPENDENCY_PREFIX ${CMAKE_SOURCE_DIR}/dependencies)
 set(JULIA_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/julia)
+set(SETTINGS_FILE_LOCATION ${CMAKE_SOURCE_DIR}/settings.jl)
 
 configure_file("${CMAKE_SOURCE_DIR}/resource_path.hpp.in" "${CMAKE_SOURCE_DIR}/resource_path.hpp" @ONLY)
 
@@ -17,7 +18,10 @@ configure_file("${CMAKE_SOURCE_DIR}/resource_path.hpp.in" "${CMAKE_SOURCE_DIR}/r
 add_library(rat_game
 
     include/initialize.hpp
-        include/initialize.hpp .src/initialize.cpp)
+    .src/initialize.cpp
+
+    include/render_window.hpp
+    include/input_handler.hpp)
 
 ### INCLUDE DIRECTORIES ##
 

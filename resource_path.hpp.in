@@ -7,5 +7,9 @@
 
 namespace game
 {
+    // path to julia directory
     const std::string JULIA_INCLUDE_PATH = "@JULIA_INCLUDE_PATH@";
+
+    // path to settings.jl
+    const std::string SETTINGS_FILE_LOCATION = "@SETTINGS_FILE_LOCATION@";
 }

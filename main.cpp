@@ -10,11 +10,21 @@
 
 #include <initialize.hpp>
 
+#include <SFML/Window.hpp>
+#include <render_window.hpp>
+
 using namespace game;
 
 int main()
 {
     initialize();
+
+    while (true)
+    {
+        render_window.display();
+        render_window.close();
+    }
+
     return 0;
 }
 
