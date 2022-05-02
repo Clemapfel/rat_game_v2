@@ -6,7 +6,7 @@
 # entity mutation
 @testset "entity mutation" begin
 
-    e = Entity("test")
+    e = Entity(:test)
 
     @test get_hp(e) == e.hp
     @test get_ap(e) == e.ap

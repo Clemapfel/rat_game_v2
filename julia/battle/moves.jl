@@ -24,7 +24,7 @@ end
 # declare move
 struct Move
 
-    id::String      # internal id
+    id::Symbol      # internal id
     name::String    # cleartext name
 
     short_description::String    # in-battle description
@@ -45,7 +45,7 @@ struct Move
     targets_enemy::Bool
 
     # debug ctor
-    function Move(id, base::Function, bonus::Function)
+    function Move(id::Symbol, base::Function, bonus::Function)
 
         return new(id, id,
             "", "",
@@ -57,7 +57,7 @@ struct Move
 
     # ctor
     function Move(;
-        id::String,
+        id::Symbol,
         name::String,
         short_description::String,
         verbose_description::String,
@@ -83,8 +83,43 @@ struct Move
 end
 
 # global move storage
-const move_library = Dict{String, Move}()
+const move_library = Dict{Symbol, Move}()
 
+# add move to move_library
+function new_move(
+    id::Symbol,
+    name::String,
+    short_description::String,
+    verbose_description::String
+    ;
+    ap::Integer,
+    stacks::Integer,
+    primes::ComboType,
+    detonates::ComboType,
+    mode::TargetingMode,
+    targets_self::Bool,
+    targets_ally::Bool,
+    targets_enemy::Bool,
+    base::Function,
+    bonus::Function)
+
+    setindex!(move_library, Move(
+        id=id, name=name,
+        short_description=short_description, verbose_description=verbose_description,
+        ap_cost=ap, n_stacks=stacks,
+        base_f=base, bonus_f=bonus,
+        primes=primes, detonates=detonates,
+        targeting_mode=mode,
+        targets_self=targets_self,
+        targets_ally=targets_ally,
+        targets_enemy=targets_enemy
+    ), id)
+end
+
+# access move library
+function get_move(id::Symbol) ::Move
+    return move_library[id]
+end
 
 ### ENTITY INTERACTION ###
 abstract type AbstractEntity end

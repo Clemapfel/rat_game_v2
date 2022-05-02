@@ -6,7 +6,7 @@
 # status behavior
 @testset "status ailment" begin
 
-    e = Entity("test")
+    e = Entity(:test)
 
     @test e.status_state.status== NO_STATUS
     @testset begin

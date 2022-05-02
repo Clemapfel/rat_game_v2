@@ -11,7 +11,7 @@ abstract type AbstractEntity end
 # declare battle entity, player or enemy
 mutable struct Entity <: AbstractEntity
 
-    id::String      # internal id
+    id::Symbol      # internal id
     name::String    # cleartext name
     is_enemy::Bool  # is party
 
@@ -36,11 +36,11 @@ mutable struct Entity <: AbstractEntity
     moveset::Moveset
 
     # default ctor for debugging
-    function Entity(id::String)
+    function Entity(id::Symbol)
 
         base = BaseStats(100, 100, 50, 50, 50)
         return new(
-            id, id, false,
+            id, String(id), false,
             base,
             base.hp, base.ap,
             ZERO, ZERO, ZERO, NO_TYPE,
@@ -49,8 +49,8 @@ mutable struct Entity <: AbstractEntity
 
     # ctor
     function Entity(;
+        id::Symbol,
         name::String,
-        id::String,
         is_enemy::Bool,
         hp_base::Integer,
         ap_base::Integer,
