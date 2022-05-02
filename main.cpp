@@ -12,17 +12,27 @@
 
 #include <SFML/Window.hpp>
 #include <render_window.hpp>
+#include <input_handler.hpp>
 
 using namespace game;
 
 int main()
 {
-    initialize();
+    game::initialize();
 
-    while (true)
+    auto window = sf::Window(
+        sf::VideoMode(500, 500),//window_config::video_mode,
+        "rat_game_debug",
+        sf::Style::None | sf::Style::Titlebar,
+        window_config::context_settings
+    );
+    window.setFramerateLimit(window_config::fps_limit);
+    window.setVerticalSyncEnabled(window_config::vsync_enabled);
+
+    while (window.isOpen())
     {
-        render_window.display();
-        render_window.close();
+        InputHandler::update(window);
+        window.display();
     }
 
     return 0;

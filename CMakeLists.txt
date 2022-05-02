@@ -21,7 +21,7 @@ add_library(rat_game
     .src/initialize.cpp
 
     include/render_window.hpp
-    include/input_handler.hpp)
+    include/input_handler.hpp .src/input_handler.cpp)
 
 ### INCLUDE DIRECTORIES ##
 
@@ -36,19 +36,25 @@ target_include_directories(rat_game PUBLIC
 
 ### LIBRARIES ###
 
-find_library(julia REQUIRED NAMES julia PATHS ${DEPENDENCY_PREFIX}/julia/lib)
-find_library(jluna REQUIRED NAMES jluna PATHS ${DEPENDENCY_PREFIX}/jluna)
-find_library(sfml-audio REQUIRED NAMES sfml-audio PATHS ${DEPENDENCY_PREFIX}/SFML/build/lib)
-find_library(sfml-window REQUIRED NAMES sfml-window PATHS ${DEPENDENCY_PREFIX}/SFML/build/lib)
-find_library(sfml-system REQUIRED NAMES sfml-system PATHS ${DEPENDENCY_PREFIX}/SFML/build/lib)
+
+find_library(julia REQUIRED NAMES julia PATHS "${DEPENDENCY_PREFIX}/julia/lib")
+find_library(jluna REQUIRED NAMES jluna PATHS "${DEPENDENCY_PREFIX}/jluna")
+
+
+find_library(sfml-graphics REQUIRED NAMES sfml-graphics PATHS "${DEPENDENCY_PREFIX}/SFML/build/lib" NO_DEFAULT_PATH)
+find_library(sfml-window   REQUIRED NAMES sfml-window   PATHS "${DEPENDENCY_PREFIX}/SFML/build/lib" NO_DEFAULT_PATH)
+find_library(sfml-system   REQUIRED NAMES sfml-system   PATHS "${DEPENDENCY_PREFIX}/SFML/build/lib" NO_DEFAULT_PATH)
+find_library(sfml-audio    REQUIRED NAMES sfml-audio    PATHS "${DEPENDENCY_PREFIX}/SFML/build/lib" NO_DEFAULT_PATH)
+
 find_library(box2d REQUIRED NAMES box2d PATHS ${DEPENDENCY_PREFIX}/box2d/build/bin)
 
 target_link_libraries(rat_game PUBLIC
     ${julia}
     ${jluna}
-    ${sfml-audio}
     ${sfml-window}
     ${sfml-system}
+    ${sfml_graphics}
+    ${sfml-audio}
 )
 
 ### TESTS ###
