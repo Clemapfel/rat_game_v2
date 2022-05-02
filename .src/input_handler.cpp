@@ -12,18 +12,24 @@ namespace game
     void InputHandler::load_button_mapping()
     {
         using namespace jluna;
-        Module binding = Main["settings"]["keyboard_bindings"];
+        Module binding = Main["game"]["settings"]["keyboard_bindings"];
 
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["A"])), Key::A);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["B"])), Key::B);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["X"])), Key::X);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["Y"])), Key::Y);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["START"])), Key::START);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["SELECT"])), Key::SELECT);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["UP"])), Key::UP);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["DOWN"])), Key::DOWN);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["LEFT"])), Key::LEFT);
-        _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(binding["RIGHT"])), Key::RIGHT);
+        auto emplace = [&](std::string name, Key key)
+        {
+            static auto convert = Main.safe_eval("(x) -> Int64(x)");
+            _mapping.emplace(sf::Keyboard::Key(static_cast<Int64>(convert(binding[name]))), key);
+        };
+
+        emplace("A", Key::A);
+        emplace("B", Key::B);
+        emplace("X", Key::X);
+        emplace("Y", Key::Y);
+        emplace("START", Key::START);
+        emplace("SELECT", Key::SELECT);
+        emplace("UP", Key::UP);
+        emplace("DOWN", Key::DOWN);
+        emplace("LEFT", Key::LEFT);
+        emplace("RIGHT", Key::RIGHT);
 
         _state.emplace(Key::A, KeyState());
         _state.emplace(Key::B, KeyState());
@@ -39,6 +45,9 @@ namespace game
 
     void InputHandler::update(sf::Window& render_window)
     {
+        if (_mapping.empty())
+            load_button_mapping();
+
         for (auto pair : _state)
         {
             pair.second.down_last_frame = pair.second.down_this_frame;

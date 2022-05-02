@@ -8,6 +8,7 @@ module game
 
     include("./common/macros.jl")
     include("./common/random.jl")
+    include("./common/player_input.jl")
 
     # declare module battle
     module battle
@@ -19,6 +20,8 @@ module game
         include("./battle/config/move_config.jl")
         include("./battle/battle_entity.jl")
     end
+
+    include("../settings.jl")
 end
 
 using Main.game

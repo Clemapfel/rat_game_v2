@@ -10,34 +10,46 @@
 
 namespace game
 {
-    void initialize()
+    void initialize(sf::Window& render_window)
     {
         using namespace jluna;
         jluna::initialize();
+        safe_eval_file(game::JULIA_INCLUDE_PATH + "/include.jl");
 
-        safe_eval_file(game::SETTINGS_FILE_LOCATION);
-        Module settings = Main["settings"];
+        Module settings = Main["game"]["settings"];
 
-        window_config::video_mode = sf::VideoMode(
+        auto video_mode = sf::VideoMode(
                 (size_t) settings["video"]["screenwidth"],
                 (size_t) settings["video"]["screenheight"]
         );
 
-        window_config::context_settings = sf::ContextSettings();
-        window_config::context_settings.antialiasingLevel = (size_t) settings["video"]["anti_aliasing_level"];
-        window_config::context_settings.majorVersion = 3;
-        window_config::context_settings.minorVersion = 4;
+        auto context_settings = sf::ContextSettings();
+        context_settings.antialiasingLevel = (size_t) settings["video"]["anti_aliasing_level"];
+        context_settings.majorVersion = 3;
+        context_settings.minorVersion = 4;
+
+        Int32 window_style = sf::Style::None;
 
         if ((bool) settings["video"]["fullscreen"])
-            window_config::style = sf::Style::None | sf::Style::Fullscreen;
+            window_style |= sf::Style::Fullscreen;
         else
-            window_config::style = sf::Style::None | sf::Style::Titlebar | sf::Style::Close;
+            window_style |= sf::Style::Titlebar;
+
+        window_style |= sf::Style::Close;
+
+        render_window.create(
+            video_mode,
+            "rat_game_debug",
+            window_style,
+            context_settings
+        );
 
         size_t fps_limit = settings["video"]["fps_limit"];
         window_config::fps_limit = fps_limit;
         window_config::frame_duration = sf::seconds(1 / float(fps_limit));
 
-        safe_eval_file(game::JULIA_INCLUDE_PATH + "/include.jl");
+        render_window.setFramerateLimit(fps_limit);
+        render_window.setVerticalSyncEnabled(settings["video"]["vsync_enabled"]);
     }
 }
 

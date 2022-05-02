@@ -5,8 +5,10 @@
 
 #pragma once
 
+#include <SFML/Window.hpp>
+
 namespace game
 {
     /// initialize julia state
-    void initialize();
+    void initialize(sf::Window&);
 }

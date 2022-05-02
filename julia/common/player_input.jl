@@ -4,11 +4,11 @@
 #
 
 module keyboard
-   
+
     # values are equal to sf::Keyboard::Key
     @enum Key begin
-        UNKNOWN = -1
-        A = 0
+        UNKNOWN = Int64(-1)
+        A = Int64(0)
         B
         C
         D
@@ -109,4 +109,6 @@ module keyboard
         F15
         PAUSE
     end
+    Main.game.@export_enum Key
 end
+

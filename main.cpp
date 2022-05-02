@@ -18,21 +18,16 @@ using namespace game;
 
 int main()
 {
-    game::initialize();
-
-    auto window = sf::Window(
-        sf::VideoMode(500, 500),//window_config::video_mode,
-        "rat_game_debug",
-        sf::Style::None | sf::Style::Titlebar,
-        window_config::context_settings
-    );
-    window.setFramerateLimit(window_config::fps_limit);
-    window.setVerticalSyncEnabled(window_config::vsync_enabled);
+    auto window = sf::Window();
+    game::initialize(window);
 
     while (window.isOpen())
     {
         InputHandler::update(window);
         window.display();
+
+        if (InputHandler::was_key_pressed(Key::A))
+            std::cout << "A" << std::endl;
     }
 
     return 0;

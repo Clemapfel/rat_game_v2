@@ -3,8 +3,6 @@
 # Created on 02.05.2022 by clem (mail@clemens-cords.com)
 #
 
-include("./julia/common/player_Input.jl")
-
 module settings
 
     # window settings
@@ -21,7 +19,7 @@ module settings
 
     # bindings when using keyboard
     module keyboard_bindings
-        using Main.keyboard
+        using Main.game.keyboard
         # see rat_game/julia/common/player_input.jl for key codes
 
         A = keyboard.SPACE
@@ -32,7 +30,7 @@ module settings
         R = keyboard.R
         START = keyboard.RIGHT_BRACKET  # plus on german keyboard
         SELECT = keyboard.HYPHEN    # minus on german keyboard
-    
+
         UP = keyboard.UP_ARROW
         DOWN = keyboard.DOWN_ARROW
         LEFT = keyboard.LEFT_ARROW
