@@ -48,10 +48,11 @@ namespace game
         if (_mapping.empty())
             load_button_mapping();
 
-        for (auto pair : _state)
+        for (auto& pair : _state)
         {
             pair.second.down_last_frame = pair.second.down_this_frame;
-            pair.second.down_this_frame = false;
+            if (pair.second.down_this_frame)
+                pair.second.duration += window_config::frame_duration;
         }
 
         auto event = sf::Event();
@@ -66,7 +67,6 @@ namespace game
                 if (it != _mapping.end())
                 {
                     _state[it->second].down_this_frame = true;
-                    _state[it->second].duration += window_config::frame_duration;
                 }
                 break;
             }
