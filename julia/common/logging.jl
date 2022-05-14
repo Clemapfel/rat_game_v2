@@ -77,7 +77,7 @@ module Log
 
         const _init_lock = Base.ReentrantLock()
         _mode = Log.PRETTY
-        _options = Log.FormattingOptions[TIMESTAMP]
+        _options = Log.FormattingOptions[LABEL, TIMESTAMP]
 
         const _task_storage = Queue{Task}()
         const _task_storage_lock = Base.ReentrantLock()
@@ -87,18 +87,19 @@ module Log
 
         const _csv_delimiter = ","
         _csv_header = ""
-        const _initialization_message = "### LOGGING INITIALIZED ###"
-        const _shutdown_message = "### LOGGING SHUTDOWN ###"
+        const _initialization_message = "Logging initialized"
+        const _shutdown_message = "Logging shutdown"
 
-        const _log_label = "[LOG]"
-        const _warning_label = "[WARNING]"
-        const _exception_label = "[EXCEPTION]"
-        const _error_label = "[FATAL]"
+        const _log_label = "LOG"
+        const _warning_label = "WARNING"
+        const _exception_label = "EXCEPTION"
+        const _error_label = "FATAL"
 
-        const _log_color = :green
-        const _warning_color = :yellow
+        const _log_color = :cyan
+        const _warning_color = :light_yellow
         const _exception_color = :red
-        const _error_color = :red
+        const _error_color = :light_red
+        const _other_color = :light_black
 
         """
         `append(type::MessageType, message::String) -> Nothing`
@@ -164,14 +165,29 @@ module Log
                 elseif _mode == PRETTY
 
                     if LABEL in _options
-                        if type == LOG
-                            out *= _log_label
-                        elseif type == WARNING
-                            out *= _warning_label
-                        elseif type == EXCEPTION
-                            out *= _exception_label
-                        elseif type == ERROR
-                            out *= _error_label
+
+                        if !(_stream isa IOBuffer)
+
+                            if type == LOG
+                                printstyled(_stream, "[" * _log_label * "]", color=_log_color)
+                            elseif type == WARNING
+                                printstyled(_stream, "[" * _warning_label * "]", color=_warning_color)
+                            elseif type == EXCEPTION
+                                printstyled(_stream, "[" * _exception_label * "]", color=_exception_color)
+                            elseif type == ERROR
+                                printstyled(_stream, "[" * _error_label * "]", color=_error_color)
+                            end
+                        else
+
+                            if type == LOG
+                                out *= "[" * _log_label * "]"
+                            elseif type == WARNING
+                                out *= "[" * _warning_label * "]"
+                            elseif type == EXCEPTION
+                                out *= "[" * _exception_label * "]"
+                            elseif type == ERROR
+                                out *= "[" * _error_label * "]"
+                            end
                         end
                     end
 
@@ -205,32 +221,9 @@ module Log
                         out *= " "
                     end
 
-                    if !(_stream isa IOStream) # use colors if printing to stdout
-
-                        @lock _stream_lock begin
-
-                            if type == LOG
-                                printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=detail._log_color)
-                            elseif type == WARNING
-                                printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=detail._warning_color)
-                            elseif type == EXCEPTION
-                                printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=detail._exception_color)
-                            elseif type == ERROR
-                                printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=detail._error_color)
-                            end
-                            print("\n")
-                            flush(detail._stream)
-                        end
-                    else
-                        @lock _stream_lock begin
-                            Base.write(_stream, out)
-                            flush(_stream)
-                        end
-                    end
+                    printstyled(_stream, out, color=_other_color)
+                    print(_stream, m * "\n")
+                    flush(_stream)
                 end
             end))
 
@@ -322,7 +315,7 @@ module Log
     function init(
         path::String = "",
         mode::FormattingMode = PRETTY,
-        options::Vector{FormattingOptions} = [LABEL, TIMESTAMP]
+        options::Vector{FormattingOptions} = (path == "" ? [LABEL] : [LABEL, DATESTAMP, TIMESTAMP])
     ) ::Bool
 
         @lock detail._init_lock begin
@@ -411,4 +404,25 @@ module Log
             return false
         end
     end
+
+
+    """
+    `log(::Any...) -> Nothing`
+
+    convert any arguments to strings, then print as log message
+    """
+    macro log(xs...)
+        Log.write(xs..., type=Log.LOG)
+    end
+    export log
+
+    """
+    `log(::Any...) -> Nothing`
+
+    convert any arguments to strings, then print as warning message
+    """
+    macro warning(xs...)
+        Log.write(msg..., type=Log.WARNING)
+    end
+    export warning
 end
