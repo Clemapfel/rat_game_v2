@@ -43,7 +43,6 @@ module Log
         _initialization_message = "### LOGGING INITIALIZED ###"
         _shutdown_message = "### LOGGING SHUTDOWN ###"
 
-
         _queue_add_lock = Base.ReentrantLock()
         _queue = Queue{String}()
 
@@ -52,19 +51,28 @@ module Log
         _aborting = false
         _queue_cv = Threads.Condition()
         _queue_cv_lock = Base.ReentrantLock()
-        _queue_worker = Threads.@spawn begin
+        _queue_worker = Task(() -> ())
 
-            while !_aborting
-                @lock _queue_cv.lock begin
-                    wait(_queue_cv)
+        """
+        `init_queue_worker() -> Nothing`
+
+        initialize the worker thread
+        """
+        function init_queue_worker() ::Nothing
+            global _aborting = false
+            global _queue_worker = Threads.@spawn begin
+
+                while !_aborting
+                    @lock _queue_cv.lock wait(_queue_cv)
+
                     while !isempty(_queue)
-                        write(_stream, dequeue!(_queue))
+                        Base.write(_stream, dequeue!(_queue))
                         flush(_stream)
                     end
                 end
             end
+            return nothing
         end
-
 
         """
         `abort() -> Nothing`
@@ -72,7 +80,7 @@ module Log
         Safely shutdown the queue worker, also flushes queue
         """
         function abort() ::Nothing
-            _aborting = true
+            global _aborting = true
             Log.write(detail._shutdown_message)
             wait(_queue_worker)
             return nothing
@@ -181,6 +189,8 @@ module Log
             else
                 detail.eval(:(_stream = stdout))
             end
+
+            detail.init_queue_worker()
 
             Log.write(detail._initialization_message)
             lock(detail._queue_cv.lock)
