@@ -8,6 +8,7 @@ module game
 
     include("./common/macros.jl")
     include("./common/random.jl")
+    include("./logging.jl")
     include("./common/player_input.jl")
 
     # declare module battle
