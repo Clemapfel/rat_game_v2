@@ -28,8 +28,8 @@ module Log
         _stream_lock = Base.ReentrantLock()
         # _stream = <created during Log.initialize>
 
-        _dateformat = Dates.DateFormat("d/m|H:M:S")
         _csv_delimiter = ","
+        _initialization_message = "### LOGGING INITIALIZED ###"
 
         _queue_add_lock = Base.ReentrantLock()
         _queue = Queue{String}()
@@ -39,15 +39,12 @@ module Log
         _queue_cv_lock = Base.ReentrantLock()
         _queue_worker = Threads.@spawn begin
             while true
-
                 if _aborting return end
 
-
                 lock(_queue_cv.lock)
-
                 try
                     wait(_queue_cv)
-                    if !isempty(_queue)
+                    while !isempty(_queue)
 
                         write(_stream, dequeue!(_queue))
                         flush(_stream)
@@ -61,11 +58,17 @@ module Log
         function append(message::String, options::FormattingOptions...) ::Nothing
 
             out::String = ""
+            now = Dates.now()
+
+            function add_zero(num) ::String
+                out = ""
+                if num < 10 out *= "0" end
+                return out * string(num)
+            end
 
             if CSV in options
 
                 # header: day,month,time,thread_id,message
-                now = Dates.now()
 
                 out *= string(Dates.day(now)) * detail._csv_delimiter
                 out *= string(Dates.month(now)) * detail._csv_delimiter
@@ -74,7 +77,11 @@ module Log
             else
                 if TIMESTAMP in options
                     out *= "["
-                    out *= Dates.format(Dates.now(), detail._dateformat)
+                    #out *= add_zero(Dates.day(now)) * "."
+                    #out *= add_zero(Dates.month(now)) * "-"
+                    out *= add_zero(Dates.hour(now)) * ":"
+                    out *= add_zero(Dates.minute(now)) * ":"
+                    out *= add_zero(Dates.second(now))
                     out *= "]"
                 end
 
@@ -87,15 +94,10 @@ module Log
                 end
             end
 
-            out *= message
+            out *= message * "\n"
             enqueue!(_queue, out)
-
-            lock(_queue_cv.lock)
-            notify(_queue_cv)
-            unlock(_queue_cv.lock)
+            return nothing
         end
-
-        return nothing
     end
 
     """
@@ -106,7 +108,7 @@ module Log
     @param path: path of the log output file, optional
     @returns true if initialization was successful, false otherwise
     """
-    function init(path::String = "") ::Nothing
+    function init(path::String = "") ::Bool
 
         lock(detail._stream_lock)
         if path != ""
@@ -115,6 +117,9 @@ module Log
             detail.eval(:(_stream = stdout))
         end
         unlock(detail._stream_lock)
+
+        Log.write(detail._initialization_message)
+        return isopen(detail._stream)
     end
     export init
 
@@ -123,7 +128,7 @@ module Log
 
     safely exist the logging environment
     """
-    function quit()
+    function quit() ::Nothing
 
         detail._abort = true
 
@@ -137,6 +142,7 @@ module Log
         flush(_stream)
         close(_stream)
         #unlock(_stream_lock)
+        return nothing
     end
     export quit
 
@@ -147,6 +153,10 @@ module Log
     write a number of objects as a string to the log stream
     """
     function write(xs...) ::Nothing
+
+        if length(xs) == 1 && string(getindex(xs, 1)) == ""
+            return nothing
+        end
 
         towrite = prod(string.([xs...]))
         detail.append(towrite, PRETTY, TIMESTAMP)
