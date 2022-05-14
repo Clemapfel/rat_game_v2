@@ -7,15 +7,26 @@ include("macros.jl")
 
 module Log
 
+    """
+    enum of formatting options
+
+    ## Values
+    - `PRETTY`: enables colors when printing (not available if logging to a file)
+    - `TIMESTAMP`: adds a timestamp of the form "<hour>:<minute>:<second>"
+    - `DATESTAMP`: adds a date of the from "<day>/<month>"
+    - `CSV`: format output as CSV
+    """
     @enum FormattingOptions begin
-        PRETTY     = 1 << 0 # enable colors
-        TIMESTAMP  = 1 << 1 # print current date and time
-        THREADID   = 1 << 2 # print id of thread write was called from
-        CSV        = 1 << 3 # print in CSV format instead
+        PRETTY     = UInt32(1) << 0 # enable colors
+        TIMESTAMP  = UInt32(1) << 1 # print current time
+        DATESTAMP  = UInt32(1) << 2 # print current date
+        THREADID   = UInt32(1) << 3 # print id of thread write was called from
+        CSV        = UInt32(1) << 4 # print in CSV format instead
     end
     export FormattingOptions
     export PRETTY
     export TIMESTAMP
+    export DATESTAMP
     export THREADID
     export CSV
 
@@ -24,37 +35,58 @@ module Log
         using Dates
         using DataStructures
         using Main.Log
+        using Test
 
-        _stream_lock = Base.ReentrantLock()
-        # _stream = <created during Log.initialize>
+        _stream = stdout
 
         _csv_delimiter = ","
         _initialization_message = "### LOGGING INITIALIZED ###"
+        _shutdown_message = "### LOGGING SHUTDOWN ###"
+
 
         _queue_add_lock = Base.ReentrantLock()
         _queue = Queue{String}()
+
+        _init_lock = Base.ReentrantLock()
 
         _aborting = false
         _queue_cv = Threads.Condition()
         _queue_cv_lock = Base.ReentrantLock()
         _queue_worker = Threads.@spawn begin
-            while true
-                if _aborting return end
 
-                lock(_queue_cv.lock)
-                try
+            while !_aborting
+                @lock _queue_cv.lock begin
                     wait(_queue_cv)
                     while !isempty(_queue)
-
                         write(_stream, dequeue!(_queue))
                         flush(_stream)
                     end
-                finally
-                    unlock(_queue_cv.lock)
                 end
             end
         end
 
+
+        """
+        `abort() -> Nothing`
+
+        Safely shutdown the queue worker, also flushes queue
+        """
+        function abort() ::Nothing
+            _aborting = true
+            Log.write(detail._shutdown_message)
+            wait(_queue_worker)
+            return nothing
+        end
+
+        """
+        `append(message::String, [options::FormattingOptions...]) -> Nothing`
+
+        append a message to the log stream
+
+        ## Arguments
+        + `message`: raw string
+        + `options`: multiple formatting options, optional
+        """
         function append(message::String, options::FormattingOptions...) ::Nothing
 
             out::String = ""
@@ -79,6 +111,7 @@ module Log
                     out *= "["
                     #out *= add_zero(Dates.day(now)) * "."
                     #out *= add_zero(Dates.month(now)) * "-"
+                    #out *= "|"
                     out *= add_zero(Dates.hour(now)) * ":"
                     out *= add_zero(Dates.minute(now)) * ":"
                     out *= add_zero(Dates.second(now))
@@ -98,28 +131,65 @@ module Log
             enqueue!(_queue, out)
             return nothing
         end
+
+        using Test
+        function test()
+
+            Test.@testset "Logging" begin
+
+                try
+
+                Test.@test istaskstarted(Log.detail._queue_worker)
+
+                Log.init(Base.Filesystem.pwd() * "/_.log")
+
+                Test.@test Base.Filesystem.isfile(Log.detail._stream)
+                Test.@test isopen(Log.detail._stream)
+
+                Log.write("test line")
+                Log.quit()
+                Test.@test !isopen(Log.detail._stream)
+
+                file = open(Base.Filesystem.pwd() * "/_.log", read=true)
+
+                Test.@test occursin(Log.detail._initialization_message, readline(file))
+                Test.@test occursin("test line", readline(file))
+
+                finally Base.Filesystem.rm(Base.Filesystem.pwd() * "/_.log") end
+            end
+        end
     end
 
     """
-    `initialize([::String]) -> Bool`
+    `initialize([path::String]) -> Bool`
 
     initialize the logging environment
 
-    @param path: path of the log output file, optional
-    @returns true if initialization was successful, false otherwise
+    ## Arguments
+    + `path`: path of the log output file, or `""` if the log should write to stdout instead
+
+    ## Returns
+    `true` if initialization was successful, `false` otherwise
     """
     function init(path::String = "") ::Bool
 
-        lock(detail._stream_lock)
-        if path != ""
-            detail.eval(:(_stream = open($path, append=true, truncate=false)))
-        else
-            detail.eval(:(_stream = stdout))
-        end
-        unlock(detail._stream_lock)
+        out = false
+        @lock detail._init_lock begin
 
-        Log.write(detail._initialization_message)
-        return isopen(detail._stream)
+            if path != ""
+                detail.eval(:(_stream = open($path, append=true, truncate=false)))
+            else
+                detail.eval(:(_stream = stdout))
+            end
+
+            Log.write(detail._initialization_message)
+            lock(detail._queue_cv.lock)
+            notify(detail._queue_cv)
+            unlock(detail._queue_cv.lock)
+
+            out = isopen(detail._stream)
+        end
+        return out
     end
     export init
 
@@ -129,28 +199,23 @@ module Log
     safely exist the logging environment
     """
     function quit() ::Nothing
-
-        detail._abort = true
-
-        lock(detail._queue.lock)
-        while !isempty(detail._queue)
-            notify(detail._queue_cv)
+        @lock detail._init_lock begin
+            detail.abort()
+            if detail._stream isa IOStream
+                close(detail._stream)
+            end
         end
-        unlock(detail._queue.lock);
-
-        #lock(_stream_lock)
-        flush(_stream)
-        close(_stream)
-        #unlock(_stream_lock)
         return nothing
     end
     export quit
 
-
     """
     `write(::Any...) -> Nothing`
 
-    write a number of objects as a string to the log stream
+    write to the log stream
+
+    ## Arguments
+    + `xs...`: any number of objects, will be converted to strings, similar to Base.print
     """
     function write(xs...) ::Nothing
 
@@ -159,15 +224,13 @@ module Log
         end
 
         towrite = prod(string.([xs...]))
-        detail.append(towrite, PRETTY, TIMESTAMP)
+        Base.Task(detail.append(towrite, PRETTY, TIMESTAMP))
 
         lock(detail._queue_cv.lock)
         notify(detail._queue_cv)
         unlock(detail._queue_cv.lock)
         return nothing
     end
+    export write
 end
 
-import Base.Filesystem
-Log.init("") #""Filesystem.pwd() * "/test.log")
-Log.write("test a", 12321, "testbs")
