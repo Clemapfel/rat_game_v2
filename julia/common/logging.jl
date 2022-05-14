@@ -12,7 +12,7 @@ module Log
     enum of formatting options, decides additional log contents
 
     ## Values
-    - `LABEL`: addes type of log message (LOG, WARNING, EXCEPTION, ERROR) as label
+    - `LABEL`: addes type of log message (`LOG`, `WARNING`, `EXCEPTION`, `ERROR`) as label
     - `TIMESTAMP`: adds a timestamp of the form "<hour>:<minute>:<second>"
     - `DATESTAMP`: adds a date of the from "<day>/<month>"
     - `THREADID`: native handle of current thread
@@ -30,10 +30,10 @@ module Log
     export THREADID
 
     """
-    enum of formatting modes, decide the general structue of log messages
+    enum of formatting modes, decides the general structue of log message strings
 
     ## Values
-    - `PRETTY`: colors, human readable output
+    - `PRETTY`: human readable output, colored if writing to stdout
     - `CSV`: format output as CSV
     """
     @enum FormattingMode begin
@@ -45,7 +45,7 @@ module Log
     export CSV
 
     """
-    enum of message types, if in PRETTY mode, colors of log output will be adjusted as followss:
+    enum of message types, if in PRETTY mode, type influences color of the message
 
     ## Values
     - `LOG`: grey text with `[LOG]` prefix
@@ -89,10 +89,16 @@ module Log
         _csv_header = ""
         const _initialization_message = "### LOGGING INITIALIZED ###"
         const _shutdown_message = "### LOGGING SHUTDOWN ###"
+
         const _log_label = "[LOG]"
         const _warning_label = "[WARNING]"
         const _exception_label = "[EXCEPTION]"
         const _error_label = "[FATAL]"
+
+        const _log_color = :green
+        const _warning_color = :yellow
+        const _exception_color = :red
+        const _error_color = :red
 
         """
         `append(type::MessageType, message::String) -> Nothing`
@@ -205,16 +211,16 @@ module Log
 
                             if type == LOG
                                 printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=:green)
+                                printstyled(detail._stream, m, color=detail._log_color)
                             elseif type == WARNING
                                 printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=:yellow)
+                                printstyled(detail._stream, m, color=detail._warning_color)
                             elseif type == EXCEPTION
                                 printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=:red)
+                                printstyled(detail._stream, m, color=detail._exception_color)
                             elseif type == ERROR
                                 printstyled(detail._stream, out)
-                                printstyled(detail._stream, m, color=:red, blink=true)
+                                printstyled(detail._stream, m, color=detail._error_color)
                             end
                             print("\n")
                             flush(detail._stream)
@@ -276,14 +282,14 @@ module Log
     end
 
     """
-    `write(::Any..., [message_type::MessageType]) -> Nothing`
+    `write(xs::Any...; [message_type::MessageType]) -> Nothing`
 
     write to the log stream. If julia was initialized with more than 1 thread,
-    writing is concurrent.
+    writing is concurrent and does not pause the main thread.
 
     ## Arguments
-    + `xs...`: any number of objects, will be converted to strings, similar to Base.print
-    + `message_type`: [optional] one of LOG, WARNING, EXCEPTION, ERROR
+    + `xs`: any number of objects, will be converted to strings, similar to Base.print
+    + `message_type`: [optional] one of `LOG`, `WARNING`, `EXCEPTION`, `ERROR`
     """
     function write(xs...; type::MessageType = LOG)
 
@@ -303,8 +309,12 @@ module Log
 
     ## Arguments
     + `path`: [optional] path of the log output file, or `""` if the log should write to stdout instead
-    + `mode`: [optional] PRETTY for human-readable output, CSV for csv output (only recommended when logging to a file)
-    + `options`: [optional] tuple of FormattingOptions
+    + `mode`: [optional] `PRETTY` for human-readable output, `CSV` for csv output with delimiter `,`
+    + `options`: [optional] vector of FormattingOptions. Vector may contain:
+        - `LABEL` for type of message, such as `[LOG]`, `[WARNING]`, etc.
+        - `TIMESTAMP` time in `Y:M:S` format if in `PRETTY` mode, `Y:M:S.MS` if in `CSV` mode
+        - `DATESTAMP` current day and month
+        - `THREADID` native handle of the thread `Log.write` is called from
 
     ## Returns
     `true` if initialization was successful, `false` otherwise
@@ -329,7 +339,10 @@ module Log
             if mode == CSV
 
                 csv_header = ""
-                csv_header *= "type" * detail._csv_delimiter
+
+                if LABEL in options
+                    csv_header *= "type" * detail._csv_delimiter
+                end
 
                 if DATESTAMP in options
                    csv_header *= "day" * detail._csv_delimiter
@@ -399,21 +412,3 @@ module Log
         end
     end
 end
-
-# usage
-
-# pretty printing
-Log.init("")
-Log.write("this is a message")
-Log.write("this is a warning"; type=Log.WARNING)
-Log.write("this is an exception"; type=Log.EXCEPTION)
-Log.write("this is an error"; type=Log.ERROR)
-Log.quit()
-
-# csv output
-Log.init("test.log", Log.CSV, [Log.TIMESTAMP, Log.DATESTAMP, Log.THREADID])
-Log.write("this is a message")
-Log.write("this is a warning"; type=Log.WARNING)
-Log.write("this is an exception"; type=Log.EXCEPTION)
-Log.write("this is an error"; type=Log.ERROR)
-Log.quit()
