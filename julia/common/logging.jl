@@ -3,94 +3,60 @@
 # Created on 14.05.2022 by clem (mail@clemens-cords.com)
 #
 
-include("macros.jl")
-
 module Log
 
     """
-    enum of formatting options
+    enum of formatting options, decides additional log contents
 
     ## Values
-    - `PRETTY`: enables colors when printing (not available if logging to a file)
     - `TIMESTAMP`: adds a timestamp of the form "<hour>:<minute>:<second>"
     - `DATESTAMP`: adds a date of the from "<day>/<month>"
-    - `CSV`: format output as CSV
+    - `THREADID`: native handle of current thread
     """
     @enum FormattingOptions begin
-        PRETTY     = UInt32(1) << 0 # enable colors
         TIMESTAMP  = UInt32(1) << 1 # print current time
         DATESTAMP  = UInt32(1) << 2 # print current date
         THREADID   = UInt32(1) << 3 # print id of thread write was called from
-        CSV        = UInt32(1) << 4 # print in CSV format instead
     end
     export FormattingOptions
-    export PRETTY
     export TIMESTAMP
     export DATESTAMP
     export THREADID
+
+    """
+    enum of formatting modes, decide the general structue of log messages
+
+    ## Values
+    - `PRETTY`: colors, human readable output
+    - `CSV`: format output as CSV
+    """
+    @enum FormattingMode begin
+        PRETTY
+        CSV
+    end
+    export PRETTY
     export CSV
 
     module detail
 
         using Dates
-        using DataStructures
         using Main.Log
         using Test
+        using DataStructures
+
+        _init_lock = Base.ReentrantLock()
+        _mode = Log.PRETTY
+        _options = Log.FormattingOptions[TIMESTAMP]
+
+        _task_storage = Queue{Task}()
+        _task_storage_lock = Base.ReentrantLock()
 
         _stream = stdout
+        _stream_lock = Base.ReentrantLock()
 
         _csv_delimiter = ","
         _initialization_message = "### LOGGING INITIALIZED ###"
         _shutdown_message = "### LOGGING SHUTDOWN ###"
-
-        _queue_add_lock = Base.ReentrantLock()
-        _queue = Queue{String}()
-
-        _init_lock = Base.ReentrantLock()
-
-        _aborting = false
-        _queue_cv = Threads.Condition()
-        _queue_cv_lock = Base.ReentrantLock()
-        _queue_worker = Task(() -> ())
-
-        """
-        `init_queue_worker() -> Nothing`
-
-        initialize the worker thread
-        """
-        function init_queue_worker() ::Nothing
-
-            global _aborting = false
-            global _queue_worker = Base.Task(() -> begin
-
-                while !_aborting
-                    while !isempty(_queue)
-                        Base.write(_stream, dequeue!(_queue))
-                        flush(_stream)
-                    end
-
-                    if Threads.nthreads() == 1
-                        yieldto()
-                    end
-
-                    @lock _queue_cv.lock wait(_queue_cv)
-                end
-            end)
-            return nothing
-        end
-
-        """
-        `abort() -> Nothing`
-
-        safely shutdown the queue worker, also flushes queue
-        """
-        function abort() ::Nothing
-
-            global _aborting = true
-            Log.write(detail._shutdown_message)
-            wait(_queue_worker)
-            return nothing
-        end
 
         """
         `append(message::String, [options::FormattingOptions...]) -> Nothing`
@@ -101,54 +67,89 @@ module Log
         + `message`: raw string
         + `options`: multiple formatting options, optional
         """
-        function append(message::String, options::FormattingOptions...) ::Nothing
+        function append(message::String) ::Nothing
 
-            out::String = ""
-            now = Dates.now()
+            lock(_task_storage_lock)
 
-            function add_zero(num) ::String
-                out = ""
-                if num < 10 out *= "0" end
-                return out * string(num)
+            # cleanup finished tasks
+            while !isempty(detail._task_storage) && istaskdone(first(detail._task_storage))
+                dequeue!(detail._task_storage)
             end
 
-            if CSV in options
+            enqueue!(_task_storage, Threads.@spawn begin
 
-                # header: day,month,time,thread_id,message
+                out::String = ""
+                now = Dates.now()
 
-                out *= string(Dates.day(now)) * detail._csv_delimiter
-                out *= string(Dates.month(now)) * detail._csv_delimiter
-                out *= string(Dates.format(Dates.now(), DateFormat("H:M:S:MS"))) * detail._csv_delimiter
-                out *= string(Threads.threadid()) * detail._csv_delimiter
-            else
-                if TIMESTAMP in options
-                    out *= "["
-                    #out *= add_zero(Dates.day(now)) * "."
-                    #out *= add_zero(Dates.month(now)) * "-"
-                    #out *= "|"
-                    out *= add_zero(Dates.hour(now)) * ":"
-                    out *= add_zero(Dates.minute(now)) * ":"
-                    out *= add_zero(Dates.second(now))
-                    out *= "]"
+                function add_zero(num) ::String
+                    out = ""
+                    if num < 10 out *= "0" end
+                    return out * string(num)
                 end
 
-                if THREADID in options
-                    out *= "[" * Threads.threadid() * "]"
+                if _mode == CSV
+
+                    if DATESTAMP in _options
+                        out *= string(Dates.day(now)) * detail._csv_delimiter
+                        out *= string(Dates.month(now)) * detail._csv_delimiter
+                    end
+
+                    if TIMESTAMP in _options
+                        out *= string(Dates.format(Dates.now(), DateFormat("H:M:S:MS"))) * detail._csv_delimiter
+                    end
+
+                    if THREADID in _options
+                        out *= string(Threads.threadid()) * detail._csv_delimiter
+                    end
+
+                elseif _mode == PRETTY
+
+                    if TIMESTAMP in _options || DATESTAMP in _options
+
+                        out *= "["
+
+                        if DATESTAMP in _options
+                            out *= add_zero(Dates.day(now)) * "."
+                            out *= add_zero(Dates.month(now)) * "-"
+                        end
+
+                        if DATESTAMP in _options && TIMESTAMP in _options
+                           out *= "|"
+                        end
+
+                        if TIMESTAMP in _options
+                           out *= add_zero(Dates.hour(now)) * ":"
+                            out *= add_zero(Dates.minute(now)) * ":"
+                            out *= add_zero(Dates.second(now))
+                        end
+
+                        out *= "]"
+                    end
+
+                    if THREADID in _options
+                        out *= "[" * Threads.threadid() * "]"
+                    end
+
+                    if length(_options) >= 1 # more than one char left of the message
+                        out *= " "
+                    end
                 end
 
-                if length(options) > 1 # more than one char left of the message
-                    out *= " "
-                end
-            end
+                out *= message * "\n"
 
-            out *= message * "\n"
-            enqueue!(_queue, out)
+                @lock _stream_lock begin
+                    Base.write(_stream, out)
+                    flush(_stream)
+                end
+            end)
             return nothing
         end
+        # no export
 
-        using Test
         """
         `test() -> Nothing`
+
+        testset of module `Log`
         """
         function test() ::Nothing
 
@@ -157,7 +158,6 @@ module Log
                 try
 
                 Log.init(Base.Filesystem.pwd() * "/_.log")
-                Test.@test istaskstarted(Log.detail._queue_worker)
 
                 Test.@test Base.Filesystem.isfile(Log.detail._stream)
                 Test.@test isopen(Log.detail._stream)
@@ -173,23 +173,45 @@ module Log
 
                 finally Base.Filesystem.rm(Base.Filesystem.pwd() * "/_.log") end
             end
+            return nothing
         end
+        # no export
     end
 
     """
-    `initialize([path::String]) -> Bool`
+    `write(::Any...) -> Nothing`
+
+    write to the log stream. If julia was initialized with more than 1 thread,
+    writing is concurrent.
+
+    ## Arguments
+    + `xs...`: any number of objects, will be converted to strings, similar to Base.print
+    """
+    function write(xs...)
+
+        if length(xs) == 1 && string(getindex(xs, 1)) == ""
+            return nothing
+        end
+
+        detail.append(prod(string.([xs...])))
+    end
+    export write
+
+    """
+    `initialize([path::String], [mode::FormattingMode], [options::FormattingOptions...]) -> Bool`
 
     initialize the logging environment
 
     ## Arguments
-    + `path`: path of the log output file, or `""` if the log should write to stdout instead
+    + `path`: path of the log output file, or `""` if the log should write to stdout instead, optional
+    + `mode`: PRETTY for human-readable output, CSV for csv output (only recommended when logging to a file), optional
+    + `options`: tuple of FormattingOptions, optional
 
     ## Returns
     `true` if initialization was successful, `false` otherwise
     """
-    function init(path::String = "") ::Bool
+    function init(path::String, mode::FormattingMode, options::FormattingOptions...) ::Bool
 
-        out = false
         @lock detail._init_lock begin
 
             if path != ""
@@ -197,61 +219,50 @@ module Log
             else
                 detail.eval(:(_stream = stdout))
             end
+        end
 
-            detail.init_queue_worker()
+        Log.write(detail._initialization_message)
+        out = isopen(detail._stream)
 
-            Log.write(detail._initialization_message)
-            lock(detail._queue_cv.lock)
-            notify(detail._queue_cv)
-            unlock(detail._queue_cv.lock)
-
-            out = isopen(detail._stream)
+        if !out
+           Log.write("in Log.init(" * path * ") : initialization failed.")
         end
         return out
     end
     export init
 
+    init() = init("", PRETTY, TIMESTAMP)
+    init(path::String) = init(path, PRETTY, TIMESTAMP, DATESTAMP)
+
     """
-    `quit() -> nothing`
+    `quit() -> Bool`
 
     safely exist the logging environment
+
+    ## Returns
+    `true` if shutdown was successful, false otherwise
     """
-    function quit() ::Nothing
-        @lock detail._init_lock begin
-            detail.abort()
+    function quit() ::Bool
+
+        Log.write(detail._shutdown_message)
+
+        try
+            lock(detail._task_storage_lock)
+            lock(detail._init_lock)
+
+            for task in detail._task_storage
+                wait(task)
+            end
+
+            empty!(detail._task_storage)
+
             if detail._stream isa IOStream
                 close(detail._stream)
             end
+
+            return true
+        catch (_)
+            return false
         end
-        return nothing
     end
-    export quit
-
-    """
-    `write(::Any...) -> Nothing`
-
-    write to the log stream. If julia was initialized with more than 1 thread,
-    writing is concurrent, updating the out stream with each call to `write`
-
-    ## Arguments
-    + `xs...`: any number of objects, will be converted to strings, similar to Base.print
-    """
-    function write(xs...) ::Nothing
-
-        if length(xs) == 1 && string(getindex(xs, 1)) == ""
-            return nothing
-        end
-
-        towrite = prod(string.([xs...]))
-        Base.Task(detail.append(towrite, PRETTY, TIMESTAMP))
-
-        lock(detail._queue_cv.lock)
-        notify(detail._queue_cv)
-        unlock(detail._queue_cv.lock)
-
-        yieldto(detail._queue_worker)
-        return nothing
-    end
-    export write
 end
-
