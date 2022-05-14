@@ -59,27 +59,33 @@ module Log
         initialize the worker thread
         """
         function init_queue_worker() ::Nothing
+
             global _aborting = false
-            global _queue_worker = Threads.@spawn begin
+            global _queue_worker = Base.Task(() -> begin
 
                 while !_aborting
-                    @lock _queue_cv.lock wait(_queue_cv)
-
                     while !isempty(_queue)
                         Base.write(_stream, dequeue!(_queue))
                         flush(_stream)
                     end
+
+                    if Threads.nthreads() == 1
+                        yieldto()
+                    end
+
+                    @lock _queue_cv.lock wait(_queue_cv)
                 end
-            end
+            end)
             return nothing
         end
 
         """
         `abort() -> Nothing`
 
-        Safely shutdown the queue worker, also flushes queue
+        safely shutdown the queue worker, also flushes queue
         """
         function abort() ::Nothing
+
             global _aborting = true
             Log.write(detail._shutdown_message)
             wait(_queue_worker)
@@ -141,15 +147,17 @@ module Log
         end
 
         using Test
-        function test()
+        """
+        `test() -> Nothing`
+        """
+        function test() ::Nothing
 
             Test.@testset "Logging" begin
 
                 try
 
-                Test.@test istaskstarted(Log.detail._queue_worker)
-
                 Log.init(Base.Filesystem.pwd() * "/_.log")
+                Test.@test istaskstarted(Log.detail._queue_worker)
 
                 Test.@test Base.Filesystem.isfile(Log.detail._stream)
                 Test.@test isopen(Log.detail._stream)
@@ -222,7 +230,8 @@ module Log
     """
     `write(::Any...) -> Nothing`
 
-    write to the log stream
+    write to the log stream. If julia was initialized with more than 1 thread,
+    writing is concurrent, updating the out stream with each call to `write`
 
     ## Arguments
     + `xs...`: any number of objects, will be converted to strings, similar to Base.print
@@ -239,6 +248,8 @@ module Log
         lock(detail._queue_cv.lock)
         notify(detail._queue_cv)
         unlock(detail._queue_cv.lock)
+
+        yieldto(detail._queue_worker)
         return nothing
     end
     export write
