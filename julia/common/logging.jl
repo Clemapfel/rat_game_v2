@@ -1,10 +1,51 @@
 #
-# Copyright 2022 Clemens Cords
-# Created on 14.05.2022 by clem (mail@clemens-cords.com)
+# Author: https://github.com/Clemapfel/
 #
 
 """
-logging utilities, supports concurrent environments
+logging utilities, safe in concurrent environments
+
+# Basic Usage
+
+There are 4 types of log message levels:
+
+### Log / Info
+
+To send a simple log message, similar to `Base.@info`, use `Log.@log` called with any number
+of strings. These will be concatenated, similar to `Base.println`.
+
+### Warning
+
+To send a warning, use `Log.@warning`. The message will be displayed in yellow and should be
+reserved to non-critical issues raised during execution.
+
+### Errors
+
+To send a critical error message, use `Log.@error`. This message will be displayed in red
+and contains a stacktrace. It does not raise an actual exception, users are encouraged to
+manually do so immediately proceeding the `Log.@error` call.
+
+### Debug
+
+To send debug messages, use `Log.@debug`. These message will not be displayed or logged,
+unless `Log.set_debug_enabled(true)` was called before.
+
+# Logging To Files
+
+You can tell `Log` to write all its messages to a file (instead of `stdout`) by calling
+
+```julia
+Log.init("/path/to/file.log")
+```
+
+Where `"path/to/file.log"` is the log file. If it does not exist yet, it will be created. If the
+file already contains text, it will be cleared and overridden.
+
+By default, the output is in human readable form. To switch to csv (comma separated values),
+instead call `Log.init("/path/to/file.log", CSV)`.
+
+At the end of execution, call `Log.quit()` to safely close the logging environment. If the application
+crashes or otherwise quits unexpectedly, all already logged message will still be in the file.
 """
 module Log
 
@@ -18,10 +59,10 @@ module Log
     - `THREADID`: native handle of current thread
     """
     @enum FormattingOptions begin
-        LABEL      = UInt32(1) << 0 # print label
-        TIMESTAMP  = UInt32(1) << 1 # print current time
-        DATESTAMP  = UInt32(1) << 2 # print current date
-        THREADID   = UInt32(1) << 3 # print id of thread write was called from
+        LABEL      # print label
+        TIMESTAMP  # print current time
+        DATESTAMP  # print current date
+        THREADID   # print id of thread write was called from
     end
     export FormattingOptions
     export LABEL
@@ -57,13 +98,13 @@ module Log
         LOG
         WARNING
         EXCEPTION
-        ERROR
+        DEBUG
     end
     export MessageType
     export LOG
     export WARNING
     export EXCEPTION
-    export ERROR
+    export DEBUG
 
     """
     internal implementation details, end-users should not interact with anything in this module
@@ -79,6 +120,8 @@ module Log
         _mode = Log.PRETTY
         _options = Log.FormattingOptions[LABEL, TIMESTAMP]
 
+        _debug_enabled = false
+
         const _task_storage = Queue{Task}()
         const _task_storage_lock = Base.ReentrantLock()
 
@@ -92,13 +135,13 @@ module Log
 
         const _log_label = "LOG"
         const _warning_label = "WARNING"
-        const _exception_label = "EXCEPTION"
-        const _error_label = "FATAL"
+        const _exception_label = "FATAL"
+        const _debug_label = "DEBUG"
 
         const _log_color = :cyan
         const _warning_color = :light_yellow
-        const _exception_color = :red
-        const _error_color = :light_red
+        const _exception_color = :light_red
+        const _debug_color = :magenta
         const _other_color = :light_black
 
         """
@@ -111,6 +154,10 @@ module Log
         + `message`: raw string
         """
         function append(type::MessageType, message::String) ::Nothing
+
+            if type == DEBUG && !_debug_enabled
+                return
+            end
 
             lock(_task_storage_lock)
 
@@ -174,8 +221,8 @@ module Log
                                 printstyled(_stream, "[" * _warning_label * "]", color=_warning_color)
                             elseif type == EXCEPTION
                                 printstyled(_stream, "[" * _exception_label * "]", color=_exception_color)
-                            elseif type == ERROR
-                                printstyled(_stream, "[" * _error_label * "]", color=_error_color)
+                            elseif type == DEBUG
+                                printstyled(_stream, "[" * _debug_label * "]", color=_debug_color)
                             end
                         else
 
@@ -185,8 +232,8 @@ module Log
                                 out *= "[" * _warning_label * "]"
                             elseif type == EXCEPTION
                                 out *= "[" * _exception_label * "]"
-                            elseif type == ERROR
-                                out *= "[" * _error_label * "]"
+                            elseif type == DEBUG
+                                out *= "[" * _debug_label * "]"
                             end
                         end
                     end
@@ -405,24 +452,62 @@ module Log
         end
     end
 
+    """
+    `set_debug_enabled(::Bool) -> Nothing`
+
+    enabled debug mode, unless specifically enabled, all
+    logging with type=DEBUG will not be printed or appended to the log file
+    """
+    function set_debug_enabled(value::Bool)
+
+        lock(detail._init_lock)
+        if value
+            Log.write("Debug logging enabled", type=LOG)
+        else
+            Log.write("Debug loggin disabled", type=LOG)
+        end
+        detail.eval(:(global _debug_enabled = $value))
+        unlock(detail._init_lock)
+        return nothing
+    end
 
     """
-    `log(::Any...) -> Nothing`
+    `log(::Expr) -> Nothing`
 
     convert any arguments to strings, then print as log message
     """
-    macro log(xs...)
-        Log.write(xs..., type=Log.LOG)
+    function log(xs)
+        Log.write(__module__.eval(xs), type=Log.LOG)
     end
     export log
 
     """
-    `log(::Any...) -> Nothing`
+    `warning(::Expr) -> Nothing`
 
     convert any arguments to strings, then print as warning message
     """
-    macro warning(xs...)
-        Log.write(msg..., type=Log.WARNING)
+    macro warning(xs)
+        Log.write(__module__.eval(xs), type=Log.WARNING)
     end
     export warning
+
+    """
+    `debug(::Expr) -> Nothing`
+
+    convert any arguments to strings, then print as debug message
+    if `Log.set_debug_enabled(true)` was called before
+    """
+    macro debug(xs)
+        Log.write(__module__.eval(xs), type=Log.DEBUG)
+    end
+    export debug
+
+    """
+    `error(::Expr) -> Nothing`
+
+    write to the log and print stacktrace, does not actually raise an exception
+    """
+    macro error(xs)
+        Log.write(__module__.eval(xs), type=Log.EXCEPTION)
+    end
 end
