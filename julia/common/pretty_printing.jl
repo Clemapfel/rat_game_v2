@@ -9,7 +9,6 @@ module PrettyPrinting
     function clear_screen()
         ccall(:system, Int32, (Cstring,), "clear");
     end
-    export clear_screen
 
     # colored letter
     mutable struct Letter
@@ -28,7 +27,7 @@ module PrettyPrinting
     end
 
     # print single letter
-    function prettyprint(letter::Letter) ::Nothing
+    function Base.print(letter::Letter) ::Nothing
 
         printstyled(string(letter.value),
             color = (letter.color isa Symbol ? letter.color : Int64(letter.color)),
@@ -43,18 +42,82 @@ module PrettyPrinting
     # text, vector of letters
     struct Text
         letters::Vector{Letter}
+
+        Text(letters::Vector{Letter}) = new(letters)
+        Text(raw::String) = return parse(raw)
     end
 
     # print full text letter by letter
-    function prettyprint(text::Text) ::Nothing
+    function Base.print(text::Text) ::Nothing
 
         for char in text.letters
-            prettyprint(char)
+            print(char)
         end
     end
 
-    # parse raw text to pretty text
+
+    """
+    `rgb(::Integer, ::Integer, ::Integer) -> Int64`
+
+    map 8-bit rgb value to `printstyled` compatible number
+
+    # Arguments:
+    + red: red component in [0, 255]
+    + green: green component in [0, 255]
+    + blue: blue component in [0, 255]
+
+    # Returns
+    Int64
+
+    # Examples:
+
+    ```julia
+    # print transition from cyan to magenta
+    for i in 0:255
+        printstyled("██", color=rgb(i, 255-i, 255))
+    end
+    ```
+    """
+    function rgb(red::Integer, green::Integer, blue::Integer) ::UInt8
+
+        @assert 0 <= red <= 255 && 0 <= green <= 255 && 0 <= blue <= 255
+
+        r = Float64(red) / 255
+        g = Float64(green) / 255
+        b = Float64(blue) / 255
+
+        cube = reshape([i for i in 16:231], 6, 6, 6)
+
+        # grayscale mode: use gradient region for higher resolution
+        gray_r = round(r * 26)
+        gray_g = round(g * 26)
+        gray_b = round(b * 26)
+
+        if gray_r == gray_g == gray_b
+
+            gray = gray_r
+            if gray == 0
+                return cube[1, 1, 1]
+            elseif gray == 26
+                return cube[6, 6, 6]
+            else
+                return 231 + gray
+            end
+        else
+            # color mode: use RGB cube region
+            return UInt8(cube[Int64(round(b * 5) + 1), Int64(round(g * 5) + 1), Int64(round(r * 5) + 1)])
+        end
+    end
+
+    # parsing config
     const COLOR_TAG = "col"
+    # use `col=(<r>, <g>, <b>)` for custom color, where r, g, b in [0, 255]
+    # or use `col=<palette_color>` where `<palette_color>` is one of the following:
+
+    const palette = Dict{Symbol, UInt8}([
+        :test => rgb(123, 0, 245)
+    ])
+
     const BOLD_TAG = "b"
     const UNDERLINED_TAG = "u"
     const REVERSE_TAG = "r"
@@ -63,6 +126,7 @@ module PrettyPrinting
     const TAG_END_CHAR = ']'
     const TAG_END_PREFIX = '/'
 
+    # parse raw string to text
     function parse(raw::String) ::Text
 
         out = Letter[]
@@ -99,15 +163,44 @@ module PrettyPrinting
                         @assert raw[i] == '='
                         i += 1
 
-                        if opening
-                            num_string = ""
-                            while i < length(raw) && raw[i] != TAG_END_CHAR
-                                num_string *= raw[i]
+                        # custom
+                        if (raw[i] == '(')
+
+                            i += 1
+                            red_str = ""
+                            while raw[i] != ','
+                                red_str *= raw[i]
+                                i += 1
+                            end
+                            i += 1
+
+                            green_str = ""
+                            while raw[i] != ','
+                                green_str *= raw[i]
+                                i += 1
+                            end
+                            i += 1
+
+                            blue_str = ""
+                            while raw[i] != ')'
+                                blue_str *= raw[i]
                                 i += 1
                             end
 
-                            current_color = tryparse(UInt8, num_string)
+                            @assert raw[i] == ')'
+                            current_color = rgb(tryparse(UInt8, red_str), tryparse(UInt8, blue_str), tryparse(UInt8, green_str))
+                        # palette
+                        else
+                            color_str = ""
+                            while raw[i] != ')'
+                                color_str *= raw[i]
+                            end
+
+                            @assert raw[i] == ')'
+                            current_color = palette[Symbol(color_str)]
                         end
+
+                        i += 1
                     else
                         current_color = :normal
                     end
@@ -170,13 +263,4 @@ module PrettyPrinting
     end
 end
 
-text =
-"[b]this is bold[/b]\n" *
-"[col=123]this is colored[/col]\n" *
-"[u]this is underlined[/u]\n" *
-"[r]this is reversed[/r]\n" *
-"[fx_b] this is blinking[/fx_b]\n"*
-"[b][col=123][u][r][fx_b]this is all at once[/b][/col][/u][/r][/fx_b]\n"
-
-parsed = PrettyPrinting.parse(text)
-PrettyPrinting.prettyprint(parsed)
+parsed = PrettyPrinting.Text("[col=(0, 255, 255)]text[/col]")
