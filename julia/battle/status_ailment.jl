@@ -3,8 +3,6 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
-include("./stat_change.jl")
-
 abstract type AbstractEntity end
 
 # declare status ailments

@@ -93,6 +93,7 @@ module PrettyPrinting
     end
     ```
     """
+    const _cube =  reshape([i for i in 16:231], 6, 6, 6)
     function rgb(red::Integer, green::Integer, blue::Integer) ::UInt8
 
         @assert 0 <= red <= 255 && 0 <= green <= 255 && 0 <= blue <= 255
@@ -100,8 +101,6 @@ module PrettyPrinting
         r = Float64(red) / 255
         g = Float64(green) / 255
         b = Float64(blue) / 255
-
-        cube = reshape([i for i in 16:231], 6, 6, 6)
 
         # grayscale mode: use gradient region for higher resolution
         gray_r = round(r * 26)
@@ -112,15 +111,15 @@ module PrettyPrinting
 
             gray = gray_r
             if gray == 0 || gray == 1
-                return cube[1, 1, 1]
+                return _cube[1, 1, 1]
             elseif gray == 26
-                return cube[6, 6, 6]
+                return _cube[6, 6, 6]
             else
                 return 230 + gray
             end
         else
             # color mode: use RGB cube region
-            return UInt8(cube[Int64(round(b * 5) + 1), Int64(round(g * 5) + 1), Int64(round(r * 5) + 1)])
+            return UInt8(_cube[Int64(round(b * 5) + 1), Int64(round(g * 5) + 1), Int64(round(r * 5) + 1)])
         end
     end
 

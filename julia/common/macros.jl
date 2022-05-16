@@ -47,3 +47,16 @@ macro alias(a::Symbol, b::Symbol)
     end
 end
 export @alias
+
+macro include(path::String)
+
+    filename(str) = str[length(Base.Filesystem.dirname(str))+2:length(str)]
+    file = filename(path)
+
+    if Main.__debug_enabled
+       return :(@time print($file * "\n"); include($path); println();)
+    else
+       return :(include($path))
+    end
+end
+export @include
