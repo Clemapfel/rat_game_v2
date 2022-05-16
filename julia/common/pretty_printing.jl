@@ -5,10 +5,15 @@
 
 module PrettyPrinting
 
+    export clear_screen, Letter, Text, print_palette, animate
+
     # clear screen
-    function clear_screen()
+    function clear_screen() ::Nothing
+
         ccall(:system, Int32, (Cstring,), "clear");
+        return nothing
     end
+    export clear_screen
 
     # colored letter
     mutable struct Letter
@@ -25,6 +30,9 @@ module PrettyPrinting
             new(char, UInt8(255), false, false, false, false, true)
         end
     end
+    export Letter
+
+    Base.convert(type::Type, Letter) = Base.convert(type, Letter.value)
 
     # print single letter
     function Base.print(letter::Letter) ::Nothing
@@ -38,6 +46,7 @@ module PrettyPrinting
             hidden = !letter.is_visible
         )
     end
+    export print
 
     # text, vector of letters
     struct Text
@@ -46,6 +55,10 @@ module PrettyPrinting
         Text(letters::Vector{Letter}) = new(letters)
         Text(raw::String) = return parse(raw)
     end
+    export Text
+
+    Base.getindex(text::Text, inds...) = Base.getindex(text.letters, inds...)
+    Base.length(text::Text) = Base.length(Text.letters)
 
     # print full text letter by letter
     function Base.print(text::Text) ::Nothing
@@ -53,8 +66,10 @@ module PrettyPrinting
         for char in text.letters
             print(char)
         end
-    end
 
+        return nothing
+    end
+    export print
 
     """
     `rgb(::Integer, ::Integer, ::Integer) -> Int64`
@@ -113,7 +128,6 @@ module PrettyPrinting
     const COLOR_TAG = "col"
     # use `col=(<r>, <g>, <b>)` for custom color, where r, g, b in [0, 255]
     # or use `col=<palette_color>` where `<palette_color>` is one of the following:
-
     const palette = Dict{Symbol, UInt8}([
         :true_white => rgb(255, 255, 255),
         :gray_25 => rgb(250, 250, 250),
@@ -206,7 +220,7 @@ module PrettyPrinting
         blinking_active = false
 
         i = 1
-        #try
+        try
         while i <= length(raw)
 
             # control tag
@@ -221,7 +235,7 @@ module PrettyPrinting
 
                 if (i+length(COLOR_TAG)-1) < length(raw) && raw[i:i+length(COLOR_TAG)-1] == COLOR_TAG
 
-                    @assert color_active != opening
+                    @assert color_active != opening "trying to " * (opening ? "open" : "close") * " a color region, but it is already " * (opening ? "open" : "closed")
 
                     color_active = opening
                     i += length(COLOR_TAG)
@@ -272,25 +286,25 @@ module PrettyPrinting
                     
                 elseif (i+length(BOLD_TAG)-1) < length(raw) && raw[i:i+length(BOLD_TAG)-1] == BOLD_TAG
                     
-                    @assert bold_active != opening
+                    @assert bold_active != opening "trying to " * (opening ? "open" : "close") * " a bold region, but it is already " * (opening ? "open" : "closed")
                     bold_active = opening
                     i += length(BOLD_TAG)
                 
                 elseif (i+length(UNDERLINED_TAG)-1) < length(raw) && raw[i:i+length(UNDERLINED_TAG)-1] == UNDERLINED_TAG
 
-                    @assert underline_active != opening
+                    @assert underline_active != opening "trying to " * (opening ? "open" : "close") * " a underlined region, but it is already " * (opening ? "open" : "closed")
                     underline_active = opening
                     i += length(UNDERLINED_TAG)
                     
                 elseif (i+length(REVERSE_TAG)-1) < length(raw) && raw[i:i+length(REVERSE_TAG)-1] == REVERSE_TAG
                     
-                    @assert reverse_active != opening
+                    @assert reverse_active != opening "trying to " * (opening ? "open" : "close") * " a reverse region, but it is already " * (opening ? "open" : "closed")
                     reverse_active = opening
                     i += length(UNDERLINED_TAG)
 
                 elseif (i+length(BLINKING_TAG)-1) < length(raw) && raw[i:i+length(BLINKING_TAG)-1] == BLINKING_TAG
                         
-                    @assert blinking_active != opening
+                    @assert blinking_active != opening "trying to " * (opening ? "open" : "close") * " a blinking region, but it is already " * (opening ? "open" : "closed")
                     blinking_active = opening
                     i += length(BLINKING_TAG)
                     
@@ -315,20 +329,30 @@ module PrettyPrinting
             end
         end
 
-        """
         catch exc
 
             offset = 30
-            printstyled(stderr, "Error when parsing text at " * string(i) * "\n", color=:light_red)
-            println(stderr, raw[1:i])
+            printstyled(stderr, "Error when parsing text: at " * string(i) * "\n", color=:light_red)
+
+            text_start = max(i - 30, 1)
+            text_end = min(i + 30, length(raw))
+
+            for c in raw[text_start:text_end]
+                if Int64(c) > 33
+                    print(stderr, c)
+                end
+            end
+            printstyled(text_end < length(raw) ? " (...)\n" : "\n", color=:light_black)
+            printstyled(stderr, repeat("~", length(text_start:text_end) - offset), "^", color=:light_red)
+            println()
             throw(exc)
         end
-        """
 
         return Text(out)
     end
 
-    function print_palette()
+    # pretty print palette with each colors names
+    function print_palette() ::Nothing
 
         order = [:true_black, :gray_01, :gray_02, :gray_03, :gray_04, :gray_05, :gray_06, :gray_07,:gray_08, :gray_09, :gray_10, :gray_11, :gray_12, :gray_13, :gray_14, :gray_15, :gray_16, :gray_17, :gray_18, :gray_19, :gray_20, :gray_21, :gray_22, :gray_23, :gray_24, :gray_25, :true_white, :light_red, :red, :dark_red, :yellow, :orange, :dark_orange, :light_cinnabar, :cinnabar, :light_green, :mint, :green, :dark_green, :fir_green, :skin_light, :skin_tan, :skin_dark, :aqua, :blue, :dark_blue, :deep_blue, :light_pink, :hot_pink, :dark_pink, :light_violet, :violet, :dark_violet, :true_green, :true_yellow, :true_cyan, :true_magenta, :true_red, :true_blue]
 
@@ -341,7 +365,31 @@ module PrettyPrinting
         end
         str *= "[/r][/b]"
         print(Text(str))
+
+        return nothing
     end
+    export print_palette
+
+    # animate text
+    function animate(text::Text) ::Int
+
+        delay::Real = 0.03
+        for i in 1:length(text.letters)
+
+            print("\r")
+            for j in 1:i
+                print(text.letters[j])
+            end
+
+            c = text.letters[i].value
+            if c == ',' || c == '.' || c == ';' || c == '!' || c == '?'
+                sleep(8*delay)
+            else
+                sleep(delay)
+            end
+        end
+        return length(text.letters)
+    end
+    export animate
 end
 
-PrettyPrinting.print_palette()

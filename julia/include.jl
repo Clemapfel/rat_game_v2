@@ -9,12 +9,14 @@ module game
     include("./common/macros.jl")
     include("./common/random.jl")
     include("./logging.jl")
+    include("./pretty_printing.jl")
     include("./common/player_input.jl")
 
     # declare module battle
     module battle
         using Main.game
 
+        include("./battle/log.jl")
         include("./battle/stat_change.jl")
         include("./battle/status_ailment.jl")
         include("./battle/moves.jl")

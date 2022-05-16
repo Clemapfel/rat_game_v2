@@ -18,6 +18,8 @@ using namespace game;
 
 int main()
 {
+    auto _ = {[]{}()};
+
     auto window = sf::Window();
     game::initialize(window);
 
