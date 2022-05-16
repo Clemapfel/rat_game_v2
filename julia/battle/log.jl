@@ -5,7 +5,7 @@
 
 module BattleLog
 
-    using Main.game.PrettyPrinting
+    using Main.PrettyPrinting
 
     function print(formatted_string::String; wait=true) ::Nothing
 

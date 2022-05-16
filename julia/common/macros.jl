@@ -48,15 +48,51 @@ macro alias(a::Symbol, b::Symbol)
 end
 export @alias
 
+# optimized include
+if !isdefined(@__MODULE__, :__already_included)
+    __already_included = String[]
+end
+
 macro include(path::String)
+
+    if path in Main.__already_included
+        return
+    else
+        push!(Main.__already_included, Base.Filesystem.abspath(path))
+    end
 
     filename(str) = str[length(Base.Filesystem.dirname(str))+2:length(str)]
     file = filename(path)
 
     if Main.__debug_enabled
-       return :(@time print($file * "\n"); include($path); println();)
+       return :(@time begin Log.@log "compiling " * $file; include($path); end; println())
     else
        return :(include($path))
     end
 end
 export @include
+
+# only execute expression once, useful for scripts that may be included multiple times
+if !isdefined(@__MODULE__, :__already_executed)
+    __already_executed = Dict{String, Vector{Int64}}()
+end
+
+macro once(expr)
+
+    file = Base.Filesystem.pwd() * string(@__FILE__)
+    line::Int64 = @__LINE__
+
+    if haskey(__already_executed, file)
+        if line in __already_executed[file]
+            return
+        else
+            __module__.eval(expr)
+            push!(__already_executed[file], line)
+        end
+    else
+        __module__.eval(expr)
+        __already_executed[file] = Int64[line]
+    end
+end
+export @once
+

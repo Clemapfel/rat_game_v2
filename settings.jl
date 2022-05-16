@@ -19,7 +19,7 @@ module settings
 
     # bindings when using keyboard
     module keyboard_bindings
-        using Main.game.keyboard
+        using Main.keyboard
         # see rat_game/julia/common/player_input.jl for key codes
 
         A = keyboard.SPACE

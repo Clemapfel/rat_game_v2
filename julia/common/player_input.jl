@@ -109,6 +109,6 @@ module keyboard
         F15
         PAUSE
     end
-    Main.game.@export_enum Key
+    Main.@export_enum Key
 end
 

@@ -342,7 +342,7 @@ module PrettyPrinting
                 end
             end
             printstyled(text_end < length(raw) ? " (...)\n" : "\n", color=:light_black)
-            printstyled(stderr, repeat("~", length(text_start:text_end) - offset), "^", color=:light_red)
+            printstyled(stderr, repeat("~", i - text_start), "^", color=:light_red)
             println()
             throw(exc)
         end
