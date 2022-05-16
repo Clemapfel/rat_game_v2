@@ -96,12 +96,12 @@ module PrettyPrinting
         if gray_r == gray_g == gray_b
 
             gray = gray_r
-            if gray == 0
+            if gray == 0 || gray == 1
                 return cube[1, 1, 1]
             elseif gray == 26
                 return cube[6, 6, 6]
             else
-                return 231 + gray
+                return 230 + gray
             end
         else
             # color mode: use RGB cube region
@@ -115,7 +115,74 @@ module PrettyPrinting
     # or use `col=<palette_color>` where `<palette_color>` is one of the following:
 
     const palette = Dict{Symbol, UInt8}([
-        :test => rgb(123, 0, 245)
+        :true_white => rgb(255, 255, 255),
+        :gray_25 => rgb(250, 250, 250),
+        :gray_24 => rgb(240, 240, 240),
+        :gray_23 => rgb(230, 230, 230),
+        :gray_22 => rgb(220, 220, 220),
+        :gray_21 => rgb(210, 210, 210),
+        :gray_20 => rgb(200, 200, 200),
+        :gray_19 => rgb(190, 190, 190),
+        :gray_18 => rgb(180, 180, 180),
+        :gray_17 => rgb(170, 170, 170),
+        :gray_16 => rgb(160, 160, 160),
+        :gray_15 => rgb(150, 150, 150),
+        :gray_14 => rgb(140, 140, 140),
+        :gray_13 => rgb(130, 130, 130),
+        :gray_12 => rgb(120, 120, 120),
+        :gray_11 => rgb(110, 110, 110),
+        :gray_10 => rgb(100, 100, 100),
+        :gray_09 => rgb(90, 90, 90),
+        :gray_08 => rgb(80, 80, 80),
+        :gray_07 => rgb(70, 70, 70),
+        :gray_06 => rgb(60, 60, 60),
+        :gray_05 => rgb(50, 50, 50),
+        :gray_04 => rgb(40, 40, 40),
+        :gray_03 => rgb(30, 30, 30),
+        :gray_02 => rgb(20, 20, 20),
+        :gray_01 => rgb(10, 10, 10),
+        :true_black => rgb(0, 0, 0),
+
+        :light_red => rgb(245, 105, 154),
+        :red => rgb(237, 34, 96),
+        :dark_red => rgb(156, 0, 37),
+
+        :yellow => rgb(255, 237, 32),
+        :orange => rgb(255, 144, 0),
+        :dark_orange => rgb(191, 54, 0),
+
+        :light_cinnabar => rgb(255, 60, 31),
+        :cinnabar => rgb(232, 0, 0),
+
+        :light_green => rgb(39, 255, 146),
+        :mint => rgb(39, 255, 146),
+        :green => rgb(0, 184, 86),
+        :dark_green => rgb(0, 108, 77),
+        :fir_green => rgb(0, 46, 91),
+
+        :skin_light => rgb(247, 210, 187),
+        :skin_tan => rgb(143, 93, 54),
+        :skin_dark => rgb(81, 52, 30),
+
+        :aqua => rgb(1, 221, 255),
+        :blue => rgb(19, 175, 240),
+        :dark_blue => rgb(12, 111, 232),
+        :deep_blue => rgb(1, 45, 146),
+
+        :light_pink => rgb(238, 176, 255),
+        :hot_pink => rgb(255, 10, 243),
+        :dark_pink => rgb(169, 11, 184),
+
+        :light_violet => rgb(140, 31, 221),
+        :violet => rgb(94, 5, 161),
+        :dark_violet => rgb(66, 0, 107),
+
+        :true_green => rgb(0, 255, 0),
+        :true_yellow => rgb(255, 255, 0),
+        :true_cyan => rgb(0, 255, 255),
+        :true_magenta => rgb(255, 0, 255),
+        :true_red => rgb(255, 0, 0),
+        :true_blue => rgb(0, 0, 255)
     ])
 
     const BOLD_TAG = "b"
@@ -139,7 +206,7 @@ module PrettyPrinting
         blinking_active = false
 
         i = 1
-        try
+        #try
         while i <= length(raw)
 
             # control tag
@@ -152,7 +219,7 @@ module PrettyPrinting
                     i += 1
                 end
 
-                if raw[i:i+length(COLOR_TAG)-1] == COLOR_TAG
+                if (i+length(COLOR_TAG)-1) < length(raw) && raw[i:i+length(COLOR_TAG)-1] == COLOR_TAG
 
                     @assert color_active != opening
 
@@ -192,38 +259,36 @@ module PrettyPrinting
                         # palette
                         else
                             color_str = ""
-                            while raw[i] != ')'
-                                color_str *= raw[i]
-                            end
 
-                            @assert raw[i] == ')'
+                            while raw[i] != TAG_END_CHAR
+                                color_str *= raw[i]
+                                i += 1
+                            end
                             current_color = palette[Symbol(color_str)]
                         end
-
-                        i += 1
                     else
                         current_color = :normal
                     end
                     
-                elseif raw[i:i+length(BOLD_TAG)-1] == BOLD_TAG
+                elseif (i+length(BOLD_TAG)-1) < length(raw) && raw[i:i+length(BOLD_TAG)-1] == BOLD_TAG
                     
                     @assert bold_active != opening
                     bold_active = opening
                     i += length(BOLD_TAG)
                 
-                elseif raw[i:i+length(UNDERLINED_TAG)-1] == UNDERLINED_TAG
+                elseif (i+length(UNDERLINED_TAG)-1) < length(raw) && raw[i:i+length(UNDERLINED_TAG)-1] == UNDERLINED_TAG
 
                     @assert underline_active != opening
                     underline_active = opening
                     i += length(UNDERLINED_TAG)
                     
-                elseif raw[i:i+length(REVERSE_TAG)-1] == REVERSE_TAG
+                elseif (i+length(REVERSE_TAG)-1) < length(raw) && raw[i:i+length(REVERSE_TAG)-1] == REVERSE_TAG
                     
                     @assert reverse_active != opening
                     reverse_active = opening
                     i += length(UNDERLINED_TAG)
 
-                elseif raw[i:i+length(BLINKING_TAG)-1] == BLINKING_TAG
+                elseif (i+length(BLINKING_TAG)-1) < length(raw) && raw[i:i+length(BLINKING_TAG)-1] == BLINKING_TAG
                         
                     @assert blinking_active != opening
                     blinking_active = opening
@@ -245,12 +310,12 @@ module PrettyPrinting
                 to_push.is_reverse = reverse_active
                 to_push.is_visible = true
 
-                println(to_push.value)
                 push!(out, to_push)
                 i += 1
             end
         end
 
+        """
         catch exc
 
             offset = 30
@@ -258,9 +323,25 @@ module PrettyPrinting
             println(stderr, raw[1:i])
             throw(exc)
         end
+        """
 
         return Text(out)
     end
+
+    function print_palette()
+
+        order = [:true_black, :gray_01, :gray_02, :gray_03, :gray_04, :gray_05, :gray_06, :gray_07,:gray_08, :gray_09, :gray_10, :gray_11, :gray_12, :gray_13, :gray_14, :gray_15, :gray_16, :gray_17, :gray_18, :gray_19, :gray_20, :gray_21, :gray_22, :gray_23, :gray_24, :gray_25, :true_white, :light_red, :red, :dark_red, :yellow, :orange, :dark_orange, :light_cinnabar, :cinnabar, :light_green, :mint, :green, :dark_green, :fir_green, :skin_light, :skin_tan, :skin_dark, :aqua, :blue, :dark_blue, :deep_blue, :light_pink, :hot_pink, :dark_pink, :light_violet, :violet, :dark_violet, :true_green, :true_yellow, :true_cyan, :true_magenta, :true_red, :true_blue]
+
+        max_length = 0
+        for sym in order max_length = max(length(string(sym)), max_length) end
+
+        str = "[b][r]"
+        for sym in order
+            str *= ("[col=" * string(sym) * "] " * string(sym) * repeat(" ", max_length - length(string(sym))) * " [/col]\n")
+        end
+        str *= "[/r][/b]"
+        print(Text(str))
+    end
 end
 
-parsed = PrettyPrinting.Text("[col=(0, 255, 255)]text[/col]")
+PrettyPrinting.print_palette()
