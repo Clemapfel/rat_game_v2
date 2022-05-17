@@ -415,21 +415,23 @@ module PrettyPrinting
     mutable struct Menu <: TerminalMenus.ConfiguredMenu{TerminalMenus.Config}
 
         question::Text
-        answers_selected::Vector{Text}
-        answers_unselected::Vector{Text}
+        answers::Vector{Text}
         triggers::Vector{Function}
 
         pagesize::Int
         pageoffset::Int
         selected::Int
+        header_printed::Bool
+
         config::TerminalMenus.Config
 
         function Menu(question_raw::String, answers_raw)
 
-            new(T(question_raw),
-                Text([e.first for e in answers_raw]),
+            new(Text(question_raw),
+                [Text(e.first) for e in answers_raw],
+                #[Text(e.first) for e in answers_raw],
                 [e.second for e in answers_raw],
-                length(answers_raw), 0, -1,
+                length(answers_raw), 0, -1, false,
                 single_select_config
             )
         end
@@ -452,7 +454,12 @@ module PrettyPrinting
     end
 
     function TerminalMenus.header(m::Menu) ::String
-       return m.question
+
+        if !m.header_printed
+            PrettyPrinting.print(m.question)
+            m.header_printed = true
+        end
+        return ""#m.question
     end
 
 end
@@ -460,10 +467,10 @@ end
 import REPL
 using REPL.TerminalMenus
 
-menu = PrettyPrinting.Menu("title", [
-    "test" => () -> println("picked 1"),
-    "test2" => () -> println("picked 2"),
-    "test3" => () -> println("picked 3")
+menu = PrettyPrinting.Menu("[r]title[/r]", [
+    "[u]test[/u]" => () -> println("picked 1"),
+    "[u]test2[/u]" => () -> println("picked 2"),
+    "[u]test3[/u]" => () -> println("picked 3")
 ])
 TerminalMenus.request(menu)
 
