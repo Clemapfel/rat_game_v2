@@ -3,7 +3,7 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
-abstract type AbstractEntity end
+abstract type AbstractBattleEntity end
 
 # declare base stat
 struct BaseStats
@@ -76,13 +76,13 @@ end
 @public lower
 
 # add +1 to given stat
-raise_attack!(e::AbstractEntity) = e.attack_change = raise(e.attack_change)
-raise_defense!(e::AbstractEntity) = e.defense_change = raise(e.defense_change)
-raise_speed!(e::AbstractEntity) = e.speed_change = raise(e.speed_change)
+raise_attack!(e::AbstractBattleEntity) = e.attack_change = raise(e.attack_change)
+raise_defense!(e::AbstractBattleEntity) = e.defense_change = raise(e.defense_change)
+raise_speed!(e::AbstractBattleEntity) = e.speed_change = raise(e.speed_change)
 @public(raise_attack!, raise_defense!, raise_speed!)
 
 # add -1 to given stat
-lower_attack!(e::AbstractEntity) = e.attack_change = lower(e.attack_change)
-lower_defense!(e::AbstractEntity) = e.defense_change = lower(e.defense_change)
-lower_speed!(e::AbstractEntity) = e.speed_change = lower(e.speed_change)
+lower_attack!(e::AbstractBattleEntity) = e.attack_change = lower(e.attack_change)
+lower_defense!(e::AbstractBattleEntity) = e.defense_change = lower(e.defense_change)
+lower_speed!(e::AbstractBattleEntity) = e.speed_change = lower(e.speed_change)
 @public(lower_attack!, lower_defense!, lower_speed!)

@@ -3,6 +3,8 @@
 # Created on 02.05.2022 by clem (mail@clemens-cords.com)
 #
 
+@once begin
+
 # TEMPLATE MOVE
 new_move(:TEMPLATE_MOVE,
 
@@ -16,7 +18,7 @@ new_move(:TEMPLATE_MOVE,
     mode = SINGLE,
     targets_self = true,
     targets_ally = false,
-    targets_enemy= false,
+    targets_opponent= false,
 
     base = function (x)
     end,
@@ -24,3 +26,5 @@ new_move(:TEMPLATE_MOVE,
     bonus = function (x)
     end
 )
+
+end

@@ -3,7 +3,7 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
-abstract type AbstractEntity end
+abstract type AbstractBattleEntity end
 
 # declare status ailments
 @enum StatusAilment begin
@@ -23,7 +23,7 @@ end
 @export_enum StatusAilment
 
 # placeholder for no effect
-NO_TURN_EFFECT(_::AbstractEntity) = return
+NO_TURN_EFFECT(_::AbstractBattleEntity) = return
 @private NO_TURN_EFFECT
 
 # status state used for entities
@@ -64,7 +64,7 @@ end
 @private reset!
 
 # remove status ailment
-function cure!(e::AbstractEntity) ::Nothing
+function cure!(e::AbstractBattleEntity) ::Nothing
 
     e.status_state.status = NO_STATUS
     reset!(e.status_state)
@@ -73,7 +73,7 @@ end
 @public cure!
 
 # apply status ailment
-function inflict_status!(e::AbstractEntity, s::StatusAilment) ::Nothing
+function inflict_status!(e::AbstractBattleEntity, s::StatusAilment) ::Nothing
 
     if s == DEAD
         inflict_dead!(e)
@@ -101,7 +101,7 @@ end
 @public inflict_status!
 
 # kill entity
-function inflict_dead!(x::AbstractEntity) ::Nothing
+function inflict_dead!(x::AbstractBattleEntity) ::Nothing
 
     reset!(x.status_state)
     x.status_state.status= DEAD
@@ -110,7 +110,7 @@ end
 @public inflict_dead!
 
 # knock out
-function inflict_knocked_out!(x::AbstractEntity) ::Nothing
+function inflict_knocked_out!(x::AbstractBattleEntity) ::Nothing
 
     if x.status_state.status!= DEAD
         reset!(x.status_state)
@@ -121,7 +121,7 @@ end
 @public inflict_knocked_out!
 
 # at risk
-function inflict_at_risk!(x::AbstractEntity) ::Nothing
+function inflict_at_risk!(x::AbstractBattleEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -130,7 +130,7 @@ function inflict_at_risk!(x::AbstractEntity) ::Nothing
         x.status_state.at_risk_counter = 0
 
         # cure! after 3 turns
-        x.status_state.turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractBattleEntity)
             x.status_state.at_risk_counter += 1
             if x.status_state.at_risk_counter == 3
                cure!(x)
@@ -142,7 +142,7 @@ end
 @public inflict_at_risk!
 
 # asleep
-function inflict_asleep!(x::AbstractEntity) ::Nothing
+function inflict_asleep!(x::AbstractBattleEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -151,7 +151,7 @@ function inflict_asleep!(x::AbstractEntity) ::Nothing
         x.status_state.asleep_counter = 0
 
         # 50% chance to wake up, max 4 turns
-        x.status_state.turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractBattleEntity)
 
             x.status_state.asleep_counter += 1
 
@@ -165,7 +165,7 @@ end
 @public inflict_asleep!
 
 # poison
-function inflict_poisoned!(x::AbstractEntity) ::Nothing
+function inflict_poisoned!(x::AbstractBattleEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -173,7 +173,7 @@ function inflict_poisoned!(x::AbstractEntity) ::Nothing
         x.status_state.status= POISONED
 
         # deal 1/8th per turn
-        x.status_state.turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractBattleEntity)
             deal_damage(x, (1/8) * x.hp_base)
         end
     end
@@ -182,7 +182,7 @@ end
 @public inflict_poisoned!
 
 # blinded
-function inflict_blinded(x::AbstractEntity) ::Nothing
+function inflict_blinded(x::AbstractBattleEntity) ::Nothing
 
     if x.status_state.status== NO_STATUS
 
@@ -191,7 +191,7 @@ function inflict_blinded(x::AbstractEntity) ::Nothing
 
         # set attack to 0, lasts for 3 turns
         x.status_state.attack_factor = 0
-        x.status_state.turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractBattleEntity)
             x.status_state.blinded_counter += 1
             if (x.status_state.blinded_counter == 3)
                 cure!(x)
@@ -203,7 +203,7 @@ end
 @public inflict_blinded
 
 # burned
-function inflict_burned!(x::AbstractEntity) ::Nothing
+function inflict_burned!(x::AbstractBattleEntity) ::Nothing
 
     # fire + ice = cure!
     if x.status_state.status== CHILLED || x.status_state.status== FROZEN
@@ -214,7 +214,7 @@ function inflict_burned!(x::AbstractEntity) ::Nothing
 
         # def * 0.5, inflict 1/16th each turn
         x.status_state.defense_factor = 0.5
-        x.status_state.turn_effect = function (x::AbstractEntity)
+        x.status_state.turn_effect = function (x::AbstractBattleEntity)
             deal_damage(x, (1/16) * x.hp_base)
         end
     end
@@ -223,7 +223,7 @@ end
 @public inflict_burned!
 
 # chilled
-function inflict_chilled!(x::AbstractEntity) ::Nothing
+function inflict_chilled!(x::AbstractBattleEntity) ::Nothing
 
     # chilled + chilled = frozen
     if x.status_state.status== CHILLED
@@ -245,7 +245,7 @@ end
 @public inflict_chilled!
 
 # frozen
-function inflict_frozen!(x::AbstractEntity) ::Nothing
+function inflict_frozen!(x::AbstractBattleEntity) ::Nothing
 
     # fire + ice = cure!
     if x.status_state.status== BURNED

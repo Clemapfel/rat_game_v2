@@ -3,13 +3,13 @@
 # Created on 01.05.2022 by clem (mail@clemens-cords.com)
 #
 
-abstract type AbstractEntity end
+abstract type AbstractBattleEntity end
 
 # moveset type, dict of mover + number of stacks left (-1 for infinite)
 @alias Moveset Dict{String, Pair{Move, Int64}}
 
 # declare battle entity, player or enemy
-mutable struct Entity <: AbstractEntity
+mutable struct BattleEntity <: AbstractBattleEntity
 
     id::Symbol      # internal id
     name::String    # cleartext name
@@ -36,7 +36,7 @@ mutable struct Entity <: AbstractEntity
     moveset::Moveset
 
     # default ctor for debugging
-    function Entity(id::Symbol)
+    function BattleEntity(id::Symbol)
 
         base = BaseStats(100, 100, 50, 50, 50)
         return new(
@@ -48,7 +48,7 @@ mutable struct Entity <: AbstractEntity
     end
 
     # ctor
-    function Entity(;
+    function BattleEntity(;
         id::Symbol,
         name::String,
         is_enemy::Bool,
@@ -64,39 +64,39 @@ mutable struct Entity <: AbstractEntity
             StatusState(), Moveset())
     end
 end
-@public Entity
+@public BattleEntity
 
 ### GETTER ###
 
 # hp
-function get_hp_base(e::AbstractEntity) ::Int64
+function get_hp_base(e::AbstractBattleEntity) ::Int64
     return e.base_stats.hp
 end
 @public get_hp_base
 
-function get_hp(e::AbstractEntity) ::Int64
+function get_hp(e::AbstractBattleEntity) ::Int64
     return e.hp
 end
 @public get_hp
 
 # ap
-function get_ap_base(e::AbstractEntity) ::Int64
+function get_ap_base(e::AbstractBattleEntity) ::Int64
     return e.base_stats.ap
 end
 @public get_ap_base
 
-function get_ap(e::AbstractEntity) ::Int64
+function get_ap(e::AbstractBattleEntity) ::Int64
     return e.ap
 end
 @public get_ap
 
 # attack
-function get_attack_base(e::AbstractEntity) ::Int64
+function get_attack_base(e::AbstractBattleEntity) ::Int64
     return e.base_stats.attack
 end
 @public get_attack_base
 
-function get_attack(e::AbstractEntity) ::Int64
+function get_attack(e::AbstractBattleEntity) ::Int64
 
     value = get_attack_base(e)
     value *= stat_change_to_factor(e.attack_change)
@@ -106,12 +106,12 @@ end
 @public get_attack
 
 # defense
-function get_defense_base(e::AbstractEntity) ::Int64
+function get_defense_base(e::AbstractBattleEntity) ::Int64
     return e.base_stats.defense
 end
 @public get_defense_base
 
-function get_defense(e::AbstractEntity) ::Int64
+function get_defense(e::AbstractBattleEntity) ::Int64
 
     value = get_defense_base(e)
     value *= stat_change_to_factor(e.defense_change)
@@ -121,12 +121,12 @@ end
 @public get_defense
 
 # speed
-function get_speed_base(e::AbstractEntity) ::Int64
+function get_speed_base(e::AbstractBattleEntity) ::Int64
     return e.base_stats.speed
 end
 @public get_speed_base
 
-function get_speed(e::AbstractEntity) ::Int64
+function get_speed(e::AbstractBattleEntity) ::Int64
 
     value = get_speed_base(e)
     value *= stat_change_to_factor(e.speed_change)
@@ -136,23 +136,23 @@ end
 @public get_speed
 
 # status
-function get_status(e::AbstractEntity) ::StatusAilment
+function get_status(e::AbstractBattleEntity) ::StatusAilment
     return e.status_state.status
 end
 @public get_status
 
 # name
-function get_name(e::AbstractEntity) ::String
+function get_name(e::AbstractBattleEntity) ::String
     return e.name
 end
 
 # is enemy
-function is_enemy(e::AbstractEntity) ::Bool
+function is_enemy(e::AbstractBattleEntity) ::Bool
     return e.is_enemy
 end
 @public is_enemy
 
-function are_allies(a::AbstractEntity, b::AbstractEntity) ::Bool
+function are_allies(a::AbstractBattleEntity, b::AbstractBattleEntity) ::Bool
    return a.is_enemy == b.is_enemy
 end
 @public are_allies
@@ -160,7 +160,7 @@ end
 ### SETTER ###
 
 # hp
-function reduce_hp!(e::AbstractEntity, value::Integer) ::Nothing
+function reduce_hp!(e::AbstractBattleEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
@@ -190,7 +190,7 @@ end
 @public reduce_hp!
 @alias deal_damage! reduce_hp!
 
-function add_hp!(e::AbstractEntity, value::Integer) ::Nothing
+function add_hp!(e::AbstractBattleEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
@@ -210,7 +210,7 @@ end
 @alias heal add_hp!
 
 # ap
-function reduce_ap!(e::AbstractEntity, value::Integer) ::Nothing
+function reduce_ap!(e::AbstractBattleEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end
@@ -220,7 +220,7 @@ function reduce_ap!(e::AbstractEntity, value::Integer) ::Nothing
 end
 @public reduce_ap!
 
-function add_ap!(e::AbstractEntity, value::Integer) ::Nothing
+function add_ap!(e::AbstractBattleEntity, value::Integer) ::Nothing
 
     @assert value >= 0
     if value == 0 || get_status(e) == DEAD return end

@@ -16,12 +16,13 @@ include("./common/macros.jl")
 module battle
     using Main
 
-    @include("./battle/log.jl")
     @include("./battle/stat_change.jl")
     @include("./battle/status_ailment.jl")
     @include("./battle/moves.jl")
+    @include("./battle/battle_log.jl")
     @include("./battle/config/move_config.jl")
     @include("./battle/battle_entity.jl")
+    @include("./battle/battle_scene.jl")
 end
 
 @include("../settings.jl")

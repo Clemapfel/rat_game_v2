@@ -512,3 +512,5 @@ module Log
         Log.write(__module__.eval(xs), type=Log.EXCEPTION)
     end
 end
+Log.init()
+Log.set_debug_enabled(Main.__debug_enabled)

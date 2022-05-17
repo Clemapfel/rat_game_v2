@@ -4,6 +4,7 @@
 #
 
 module PrettyPrinting
+    using Main
 
     export clear_screen, Letter, Text, print_palette, animate
 
@@ -31,8 +32,6 @@ module PrettyPrinting
         end
     end
     export Letter
-
-    Base.convert(type::Type, Letter) = Base.convert(type, Letter.value)
 
     # print single letter
     function Base.print(letter::Letter) ::Nothing
@@ -71,6 +70,8 @@ module PrettyPrinting
     end
     export print
 
+    const _cube =  reshape([i for i in 16:231], 6, 6, 6)
+
     """
     `rgb(::Integer, ::Integer, ::Integer) -> Int64`
 
@@ -93,7 +94,6 @@ module PrettyPrinting
     end
     ```
     """
-    const _cube =  reshape([i for i in 16:231], 6, 6, 6)
     function rgb(red::Integer, green::Integer, blue::Integer) ::UInt8
 
         @assert 0 <= red <= 255 && 0 <= green <= 255 && 0 <= blue <= 255
@@ -127,6 +127,8 @@ module PrettyPrinting
     const COLOR_TAG = "col"
     # use `col=(<r>, <g>, <b>)` for custom color, where r, g, b in [0, 255]
     # or use `col=<palette_color>` where `<palette_color>` is one of the following:
+
+
     const palette = Dict{Symbol, UInt8}([
         :true_white => rgb(255, 255, 255),
         :gray_25 => rgb(250, 250, 250),
@@ -277,7 +279,7 @@ module PrettyPrinting
                                 color_str *= raw[i]
                                 i += 1
                             end
-                            current_color = palette[Symbol(color_str)]
+                            current_color = PrettyPrinting.palette[Symbol(color_str)]
                         end
                     else
                         current_color = :normal

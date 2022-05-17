@@ -65,14 +65,14 @@ macro include(path::String)
     file = filename(path)
 
     if Main.__debug_enabled
-       return :(@time begin Log.@log "compiling " * $file; include($path); end; println())
+       return :(@time begin Log.@debug "compiling " * $file; include($path); end; println())
     else
        return :(include($path))
     end
 end
 export @include
 
-# only execute expression once, useful for scripts that may be included multiple times
+# only execute expression once, useful for optimizing compile time
 if !isdefined(@__MODULE__, :__already_executed)
     __already_executed = Dict{String, Vector{Int64}}()
 end
@@ -95,4 +95,3 @@ macro once(expr)
     end
 end
 export @once
-

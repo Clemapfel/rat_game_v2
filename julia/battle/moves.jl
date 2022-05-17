@@ -30,8 +30,8 @@ struct Move
     short_description::String    # in-battle description
     verbose_description::String  # in-menu description
 
-    ap_cost::Int64      # ap cost to use, may be 0
-    n_stacks::Int64     # maximum number of stacks, may be -1 for inf
+    ap_cost::Int64     # ap cost to use, may be 0
+    n_stacks::Int64    # maximum number of stacks, may be -1 for inf
 
     base::Function     # base behavior
     bonus::Function    # behavior when detonating
@@ -42,7 +42,7 @@ struct Move
     targeting_mode::TargetingMode
     targets_self::Bool
     targets_ally::Bool
-    targets_enemy::Bool
+    targets_opponent::Bool
 
     # debug ctor
     function Move(id::Symbol, base::Function, bonus::Function)
@@ -70,7 +70,7 @@ struct Move
         targeting_mode::TargetingMode,
         targets_self::Bool,
         targets_ally::Bool,
-        targets_enemy::Bool)
+        targets_opponent::Bool)
 
         return new(id, name,
             short_description, verbose_description,
@@ -78,7 +78,7 @@ struct Move
             base_f, bonus_f,
             primes, detonates,
             targeting_mode,
-            targets_self, targets_ally, targets_enemy)
+            targets_self, targets_ally, targets_opponent)
     end
 end
 
@@ -99,7 +99,7 @@ function new_move(
     mode::TargetingMode,
     targets_self::Bool,
     targets_ally::Bool,
-    targets_enemy::Bool,
+    targets_opponent::Bool,
     base::Function,
     bonus::Function)
 
@@ -112,7 +112,7 @@ function new_move(
         targeting_mode=mode,
         targets_self=targets_self,
         targets_ally=targets_ally,
-        targets_enemy=targets_enemy
+        targets_opponent=targets_opponent
     ), id)
 end
 
@@ -122,22 +122,22 @@ function get_move(id::Symbol) ::Move
 end
 
 ### ENTITY INTERACTION ###
-abstract type AbstractEntity end
+abstract type AbstractBattleEntity end
 
 # set primed
-function set_primed!(e::AbstractEntity, type::ComboType)
+function set_primed!(e::AbstractBattleEntity, type::ComboType)
    e.primed = type
 end
 @public set_primed!
 
 # consume one stack
-function reduce_stack!(e::AbstractEntity, move::Move)
+function reduce_stack!(e::AbstractBattleEntity, move::Move)
     e.moveset[move.id].second -= 1
 end
 @public reduce_stack!
 
 # apply effect to entity
-function apply_move!(user::AbstractEntity, targets::Vector{AbstractEntity}, move::Move) ::Nothing
+function apply_move!(user::AbstractBattleEntity, targets::Vector{AbstractBattleEntity}, move::Move) ::Nothing
 
     @assert user.moveset[move.id].second != 0
     @assert !isempty(targets)
@@ -167,7 +167,7 @@ function apply_move!(user::AbstractEntity, targets::Vector{AbstractEntity}, move
         set_primed(target, move.primes)
     end
 end
-apply_move!(user::AbstractEntity, target::AbstractEntity, move::Move) = apply_move(user, [target], move)
+apply_move!(user::AbstractBattleEntity, target::AbstractBattleEntity, move::Move) = apply_move(user, [target], move)
 @public apply_move!
 
 
