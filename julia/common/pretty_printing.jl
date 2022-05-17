@@ -392,5 +392,79 @@ module PrettyPrinting
         return length(text.letters)
     end
     export animate
+
+    import REPL
+    using REPL.TerminalMenus
+
+    const single_select_config = TerminalMenus.Config(
+        scroll_wrap = true,
+        ctrl_c_interrupt = false,
+        charset=:unicode,
+        cursor = '>',
+        up_arrow = '^',
+        down_arrow = 'v',
+        updown_arrow = '|'
+    )
+
+    const multi_select_config = TerminalMenus.MultiSelectConfig(
+        single_select_config,
+        "x", # checked
+        "o"  # unchecked
+    )
+
+    mutable struct Menu <: TerminalMenus.ConfiguredMenu{TerminalMenus.Config}
+
+        question::Text
+        answers_selected::Vector{Text}
+        answers_unselected::Vector{Text}
+        triggers::Vector{Function}
+
+        pagesize::Int
+        pageoffset::Int
+        selected::Int
+        config::TerminalMenus.Config
+
+        function Menu(question_raw::String, answers_raw)
+
+            new(T(question_raw),
+                Text([e.first for e in answers_raw]),
+                [e.second for e in answers_raw],
+                length(answers_raw), 0, -1,
+                single_select_config
+            )
+        end
+    end
+    export Menu
+
+    function TerminalMenus.pick(menu::Menu, cursor::Int)
+        println()
+        menu.triggers[cursor]()
+        menu.selected = cursor
+        return true
+    end
+
+    function TerminalMenus.writeline(buf::IO, menu::Menu, idx::Int, iscursor::Bool)
+        Base.print(buf, menu.answers[idx])
+    end
+
+    function TerminalMenus.numoptions(menu::Menu) ::Int
+        return length(menu.answers)
+    end
+
+    function TerminalMenus.header(m::Menu) ::String
+       return m.question
+    end
+
 end
+
+import REPL
+using REPL.TerminalMenus
+
+menu = PrettyPrinting.Menu("title", [
+    "test" => () -> println("picked 1"),
+    "test2" => () -> println("picked 2"),
+    "test3" => () -> println("picked 3")
+])
+TerminalMenus.request(menu)
+
 
