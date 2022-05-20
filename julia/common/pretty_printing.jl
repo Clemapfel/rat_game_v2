@@ -411,17 +411,11 @@ module PrettyPrinting
         scroll_wrap = true,
         ctrl_c_interrupt = false,
         charset = :unicode,
-        cursor = 'o',
-        up_arrow = '^',
-        down_arrow = 'v',
-        updown_arrow = '|'
     )
 
-    const multi_select_config = TerminalMenus.MultiSelectConfig(
-        single_select_config,
-        "x", # checked
-        "o"  # unchecked
-    )
+    const yes_cursor_char = '▶'
+    const no_cursor_char = '◌'
+    const selected_char = '◉'
 
     mutable struct Menu <: TerminalMenus.ConfiguredMenu{TerminalMenus.Config}
 
@@ -431,9 +425,10 @@ module PrettyPrinting
 
         pagesize::Int
         pageoffset::Int
-        selected::Int
+        selected::Vector{Int}
         header_printed::Bool
-        use_default_colors::Bool
+
+        max_n_selectable::Int
 
         config::TerminalMenus.Config
 
@@ -442,8 +437,8 @@ module PrettyPrinting
             new(Text(question_raw),
                 [Text(e.first) for e in answers_raw],
                 [e.second for e in answers_raw],
-                length(answers_raw), 0, -1, false,
-                false, single_select_config
+                length(answers_raw), 0, Int[], false,
+                1, single_select_config
             )
         end
     end
@@ -453,21 +448,31 @@ module PrettyPrinting
     using REPL.TerminalMenus
 
     function TerminalMenus.pick(menu::Menu, cursor::Int)
-        println()
-        menu.triggers[cursor]()
-        return true
-    end
 
-    const yes_cursor_char = "▶"
-    const no_cursor_char = "◦"
-    const selected_char = "◉"
+        if cursor in menu.selected
+            deleteat!(menu.selected, findall(x -> x == cursor, menu.selected))
+        else
+            push!(menu.selected, cursor)
+        end
+
+        if length(menu.selected) == length(menu.max_n_selectable)
+            for i in menu.selected
+                menu.triggers[i]()
+            end
+            return true
+        else
+            return false
+        end
+    end
 
     function TerminalMenus.writeline(io::IOBuffer, menu::Menu, cursor::Int64, iscursor::Bool)
 
         if iscursor
-            printstyled(IOContext(io, :color => true), yes_cursor_char * " ", color = Int64(palette[:true_white])) # ◉▶
+            printstyled(IOContext(io, :color => true), yes_cursor_char * "  ", color = Int64(palette[:true_white]))
+        elseif cursor in menu.selected
+            printstyled(IOContext(io, :color => true), selected_char * " ")
         else
-            printstyled(IOContext(io, :color => true), no_cursor_char * " ", blink=true) # 	▬▶
+            printstyled(IOContext(io, :color => true), no_cursor_char * " ")
         end
 
         PrettyPrinting.print(IOContext(io, :color => true), menu.answers[cursor])
@@ -493,10 +498,11 @@ end
 import REPL
 using REPL.TerminalMenus
 
+"""
 menu = PrettyPrinting.Menu("[r]title[/r]", [
     "[r]test[/r]" => () -> println("picked 1"),
     "[r]test2[/r]" => () -> println("picked 2"),
     "[r]test3[/r]" => () -> println("picked 3")
 ])
-request(menu)
-
+#request(menu)
+"""
