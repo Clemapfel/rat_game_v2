@@ -3,8 +3,6 @@
 # Created on 02.05.2022 by clem (mail@clemens-cords.com)
 #
 
-@once begin
-
 # TEMPLATE MOVE
 new_move(:TEMPLATE_MOVE,
 
@@ -26,5 +24,3 @@ new_move(:TEMPLATE_MOVE,
     bonus = function (x)
     end
 )
-
-end

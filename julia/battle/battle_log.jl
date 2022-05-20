@@ -2,6 +2,7 @@
 # Copyright 2022 Clemens Cords
 # Created on 16.05.2022 by clem (mail@clemens-cords.com)
 #
+# https://discourse.julialang.org/t/run-a-command-in-a-new-terminal-window/37739/7
 
 module BattleLog
 
@@ -78,7 +79,7 @@ module BattleLog
         ])
     end
 
-    function print(formatted_string::String; wait=true) ::Nothing
+    function print(formatted_string::String; should_wait=true) ::Nothing
 
         t = Threads.@spawn beginb
 
@@ -96,7 +97,7 @@ module BattleLog
             Base.print(PrettyPrinting.Text(formatted_string))
         end
 
-        if wait Base.wait(t) end
+        if should_wait Base.wait(t) end
         return nothing
     end
 end

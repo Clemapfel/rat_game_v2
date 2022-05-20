@@ -34,9 +34,9 @@ module PrettyPrinting
     export Letter
 
     # print single letter
-    function Base.print(letter::Letter) ::Nothing
+    function Base.print(io::IO, letter::Letter) ::Nothing
 
-        printstyled(string(letter.value),
+        printstyled(io, string(letter.value),
             color = (letter.color isa Symbol ? letter.color : Int64(letter.color)),
             bold = letter.is_bold,
             underline = letter.is_underlined,
@@ -60,15 +60,24 @@ module PrettyPrinting
     Base.length(text::Text) = Base.length(Text.letters)
 
     # print full text letter by letter
-    function Base.print(text::Text) ::Nothing
+    function Base.print(io::IO, text::Text) ::Nothing
 
         for char in text.letters
-            print(char)
+            print(io, char)
         end
 
         return nothing
     end
     export print
+
+    function Base.string(text::Text)
+
+        out = ""
+        for c in text.letters
+            out *= c.value
+        end
+        return out
+    end
 
     const _cube =  reshape([i for i in 16:231], 6, 6, 6)
 
@@ -127,7 +136,6 @@ module PrettyPrinting
     const COLOR_TAG = "col"
     # use `col=(<r>, <g>, <b>)` for custom color, where r, g, b in [0, 255]
     # or use `col=<palette_color>` where `<palette_color>` is one of the following:
-
 
     const palette = Dict{Symbol, UInt8}([
         :true_white => rgb(255, 255, 255),
@@ -221,17 +229,19 @@ module PrettyPrinting
         blinking_active = false
 
         i = 1
+        advance(n = 1) = for _ in 1:n i = nextind(raw, i) end
+
         try
         while i <= length(raw)
 
             # control tag
             if raw[i] == TAG_START_CHAR
 
-                i += 1
+                advance()
                 opening = true
                 if raw[i] == TAG_END_PREFIX
                     opening = false
-                    i += 1
+                    advance()
                 end
 
                 if (i+length(COLOR_TAG)-1) < length(raw) && raw[i:i+length(COLOR_TAG)-1] == COLOR_TAG
@@ -239,45 +249,46 @@ module PrettyPrinting
                     @assert color_active != opening "trying to " * (opening ? "open" : "close") * " a color region, but it is already " * (opening ? "open" : "closed")
 
                     color_active = opening
-                    i += length(COLOR_TAG)
+                    advance(length(COLOR_TAG))
 
                     if color_active
                         @assert raw[i] == '='
-                        i += 1
+                        advance()
 
                         # custom
                         if (raw[i] == '(')
 
-                            i += 1
+                            advance()
                             red_str = ""
                             while raw[i] != ','
                                 red_str *= raw[i]
-                                i += 1
+                                advance()
                             end
-                            i += 1
+                            advance()
 
                             green_str = ""
                             while raw[i] != ','
                                 green_str *= raw[i]
-                                i += 1
+                                advance()
                             end
-                            i += 1
+                            advance()
 
                             blue_str = ""
                             while raw[i] != ')'
                                 blue_str *= raw[i]
-                                i += 1
+                                advance()
                             end
 
                             @assert raw[i] == ')'
                             current_color = rgb(tryparse(UInt8, red_str), tryparse(UInt8, blue_str), tryparse(UInt8, green_str))
+                            advance()
                         # palette
                         else
                             color_str = ""
 
                             while raw[i] != TAG_END_CHAR
                                 color_str *= raw[i]
-                                i += 1
+                                advance()
                             end
                             current_color = PrettyPrinting.palette[Symbol(color_str)]
                         end
@@ -289,32 +300,32 @@ module PrettyPrinting
                     
                     @assert bold_active != opening "trying to " * (opening ? "open" : "close") * " a bold region, but it is already " * (opening ? "open" : "closed")
                     bold_active = opening
-                    i += length(BOLD_TAG)
+                    advance(length(BOLD_TAG))
                 
                 elseif (i+length(UNDERLINED_TAG)-1) < length(raw) && raw[i:i+length(UNDERLINED_TAG)-1] == UNDERLINED_TAG
 
                     @assert underline_active != opening "trying to " * (opening ? "open" : "close") * " a underlined region, but it is already " * (opening ? "open" : "closed")
                     underline_active = opening
-                    i += length(UNDERLINED_TAG)
+                    advance(length(UNDERLINED_TAG))
                     
                 elseif (i+length(REVERSE_TAG)-1) < length(raw) && raw[i:i+length(REVERSE_TAG)-1] == REVERSE_TAG
                     
                     @assert reverse_active != opening "trying to " * (opening ? "open" : "close") * " a reverse region, but it is already " * (opening ? "open" : "closed")
                     reverse_active = opening
-                    i += length(UNDERLINED_TAG)
+                    advance(length(UNDERLINED_TAG))
 
                 elseif (i+length(BLINKING_TAG)-1) < length(raw) && raw[i:i+length(BLINKING_TAG)-1] == BLINKING_TAG
                         
                     @assert blinking_active != opening "trying to " * (opening ? "open" : "close") * " a blinking region, but it is already " * (opening ? "open" : "closed")
                     blinking_active = opening
-                    i += length(BLINKING_TAG)
+                    advance(length(BLINKING_TAG))
                     
                 else
                    throw(ErrorException("Unrecognized Control Tag"))
                 end
 
                 @assert raw[i] == TAG_END_CHAR
-                i += 1
+                advance()
             else
 
                 to_push = Letter(raw[i])
@@ -326,7 +337,7 @@ module PrettyPrinting
                 to_push.is_visible = true
 
                 push!(out, to_push)
-                i += 1
+                advance()
             end
         end
 
@@ -399,8 +410,8 @@ module PrettyPrinting
     const single_select_config = TerminalMenus.Config(
         scroll_wrap = true,
         ctrl_c_interrupt = false,
-        charset=:unicode,
-        cursor = '>',
+        charset = :unicode,
+        cursor = 'o',
         up_arrow = '^',
         down_arrow = 'v',
         updown_arrow = '|'
@@ -422,6 +433,7 @@ module PrettyPrinting
         pageoffset::Int
         selected::Int
         header_printed::Bool
+        use_default_colors::Bool
 
         config::TerminalMenus.Config
 
@@ -429,49 +441,62 @@ module PrettyPrinting
 
             new(Text(question_raw),
                 [Text(e.first) for e in answers_raw],
-                #[Text(e.first) for e in answers_raw],
                 [e.second for e in answers_raw],
                 length(answers_raw), 0, -1, false,
-                single_select_config
+                false, single_select_config
             )
         end
     end
     export Menu
 
+    import REPL
+    using REPL.TerminalMenus
+
     function TerminalMenus.pick(menu::Menu, cursor::Int)
         println()
         menu.triggers[cursor]()
-        menu.selected = cursor
         return true
     end
 
-    function TerminalMenus.writeline(buf::IO, menu::Menu, idx::Int, iscursor::Bool)
-        Base.print(buf, menu.answers[idx])
+    const yes_cursor_char = "▶"
+    const no_cursor_char = "◦"
+    const selected_char = "◉"
+
+    function TerminalMenus.writeline(io::IOBuffer, menu::Menu, cursor::Int64, iscursor::Bool)
+
+        if iscursor
+            printstyled(IOContext(io, :color => true), yes_cursor_char * " ", color = Int64(palette[:true_white])) # ◉▶
+        else
+            printstyled(IOContext(io, :color => true), no_cursor_char * " ", blink=true) # 	▬▶
+        end
+
+        PrettyPrinting.print(IOContext(io, :color => true), menu.answers[cursor])
     end
 
-    function TerminalMenus.numoptions(menu::Menu) ::Int
-        return length(menu.answers)
+    function TerminalMenus.options(menu::Menu) ::Vector{PrettyPrinting.Text}
+        return menu.answers
     end
 
-    function TerminalMenus.header(m::Menu) ::String
+    function TerminalMenus.header(m::Menu)
 
         if !m.header_printed
             PrettyPrinting.print(m.question)
+            println();
             m.header_printed = true
         end
-        return ""#m.question
+        return ""
     end
 
+    TerminalMenus.printcursor(buffer, m::Menu, active::Bool) = return
 end
 
 import REPL
 using REPL.TerminalMenus
 
 menu = PrettyPrinting.Menu("[r]title[/r]", [
-    "[u]test[/u]" => () -> println("picked 1"),
-    "[u]test2[/u]" => () -> println("picked 2"),
-    "[u]test3[/u]" => () -> println("picked 3")
+    "[r]test[/r]" => () -> println("picked 1"),
+    "[r]test2[/r]" => () -> println("picked 2"),
+    "[r]test3[/r]" => () -> println("picked 3")
 ])
-TerminalMenus.request(menu)
-
+request(menu)
 

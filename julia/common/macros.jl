@@ -73,8 +73,11 @@ end
 export @include
 
 # only execute expression once, useful for optimizing compile time
-if !isdefined(@__MODULE__, :__already_executed)
-    __already_executed = Dict{String, Vector{Int64}}()
+
+if !isdefined(Main, :__already_executed)
+    Main.eval(quote
+        __already_executed = Dict{String, Vector{Int64}}()
+    end)
 end
 
 macro once(expr)
